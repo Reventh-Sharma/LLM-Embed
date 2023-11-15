@@ -1,0 +1,6 @@
+langchain==0.0.170
+openai
+faiss-cpu
+streamlit
+streamlit-chat
+tiktoken
