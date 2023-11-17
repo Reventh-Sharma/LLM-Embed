@@ -5,3 +5,8 @@ streamlit
 streamlit-chat
 tiktoken
 transformers
+torch 
+torchvision 
+torchaudio
+datasets
+black
