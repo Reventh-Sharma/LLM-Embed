@@ -100,11 +100,17 @@ class LLMLangChainTutor():
         self.memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
 
     def conversational_qa_init(self):
+        '''
+        Creates a 'qa' object of type ConversationalRetrievalChain, which creates response to given queries based on
+        retreived documents from the vector store.
+        '''
         if self.llm_name == 'openai':
             self.qa = ConversationalRetrievalChain.from_llm(OpenAI(temperature=0), self.gen_vectorstore.as_retriever(), memory=self.memory, return_source_documents=True)
-        
+
+        # If we choose an LLM from HuggingFace
         elif self.llm_name.startswith('hf'):
             llm_name = self.llm_name.split('_')[-1]
+            # Initialize llm
             llm = HuggingFacePipeline.from_model_id(
                 model_id=llm_name,
                 task="text-generation",#"text2text-generation",#,
@@ -112,36 +118,70 @@ class LLMLangChainTutor():
                 pipeline_kwargs={'max_new_tokens':32},
                 device=self.llm_device ### self.device
             )
+            # Load buffer memory for conversation
             self.memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True, output_key='answer')
+
+            # **qa** object gets created here, which takes in llm for text generation, vector store for document embeddings
+            # and memory for conversation history
             self.qa = ConversationalRetrievalChain.from_llm(llm, self.gen_vectorstore.as_retriever(), memory=self.memory, return_source_documents=True)
 
     def load_document(self, doc_path, glob='*.pdf', chunk_size=400, chunk_overlap=0):
+        '''
+        Loads document from the given path and splits it into chunks of given size and overlap.
+        Args:
+            doc_path: Path to the document
+            glob: Glob pattern to use to find files. Defaults to "**/[!.]*"
+               (all files except hidden).
+            chunk_size: Size of tokens in each chunk
+            chunk_overlap: Number of overlapping chunks within consecutive documents.
+
+        '''
         docs = self.doc_loader(doc_path, glob=glob, show_progress=True, use_multithreading=True, max_concurrency=16).load() ### many doc loaders
 
         text_splitter = CharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap) ### hyperparams
         self.splitted_documents = text_splitter.split_documents(docs)
     
     def generate_vector_store(self):
+        """
+        Generates vector store from the documents and embedding model
+
+        """
         self.gen_vectorstore = self.vector_store.from_documents(self.splitted_documents, self.embedding_model)
     
     def save_vector_store(self, folder_path):
+        '''
+        Saves vector store to the given path
+        Args:
+            folder_path: Path to save vector store.
+        Returns:
+        '''
         self.gen_vectorstore.save_local(folder_path=folder_path)
     
     def load_vector_store(self, folder_path):
+        '''Load vectors from existing folder_path'''
         self.gen_vectorstore = self.vector_store.load_local(folder_path=folder_path, embeddings=self.embedding_model)
 
     def similarity_search_topk(self, query, k=4):
+        '''Top k-similarity search'''
         retrieved_docs = self.gen_vectorstore.similarity_search(query, k=k)
         
         return retrieved_docs
     
     def similarity_search_thres(self, query, thres=0.8):
+        '''Similarity search with which qualify threshold'''
         retrieval_result  = self.gen_vectorstore.similarity_search_with_score(query, k=10)
         retrieval_result = [d[0] for d in retrieval_result]
         
         return retrieval_result
 
     def conversational_qa(self, user_input):
+        '''
+        Return output of query given a user input.
+        Args:
+            user_input: User input query
+        Returns:
+            output: Output of the query using LLM and previous buffer
+        '''
         # return self.qa({'question': user_input})
         FIRST_PROMPT = "A chat between a student user and a teaching assistant. The assistant gives helpful, detailed, and polite answers to the user's questions based on the context.\n"
         PROMPT_TEMPLTATE = "CONTEXT: {context} \n USER: {user_input} \n ASSISTANT:"
@@ -164,6 +204,7 @@ class LLMLangChainTutor():
         return output
 
     def initialize_hf_llm(self):
+        # Initialize llm
         if not self.llm_name.startswith('hf'):
             raise NameError()
         

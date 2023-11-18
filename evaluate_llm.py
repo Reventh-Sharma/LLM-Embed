@@ -69,15 +69,17 @@ class AnswerGenerator:
 
 
 class LMTutorAnswerGenerator(AnswerGenerator):
-    def __init__(self) -> None:
+
+    def __init__(self, embed_device="cpu", llm_device="cuda:0") -> None:
         super().__init__()
         self.lmtutor = LLMLangChainTutor(
             embedding="instruct_embedding",
             llm="hf_lmsys/vicuna-7b-v1.3",
-            embed_device="cuda:6",
-            llm_device="cuda:7",
+            embed_device=embed_device,
+            llm_device=llm_device,
         )
-        self.lmtutor.load_vector_store("/home/yuheng/LMTutor/data/DSC-291-vector-lec")
+        # TODO: Variable path for load_vector_store
+        self.lmtutor.load_vector_store("data/DSC-291-vector-lec")
         self.lmtutor.initialize_hf_llm()
 
     def generate_answers(self):  # based on the questions
