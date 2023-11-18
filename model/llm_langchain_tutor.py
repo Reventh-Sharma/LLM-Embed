@@ -1,37 +1,32 @@
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.embeddings import HuggingFaceInstructEmbeddings
-from langchain.vectorstores import Chroma, FAISS
-from langchain.text_splitter import CharacterTextSplitter
-from langchain.llms import OpenAI
-from langchain.chains import ConversationalRetrievalChain, RetrievalQA
-from langchain.agents.agent_toolkits import create_conversational_retrieval_agent
-from langchain.memory import ChatMessageHistory
-
-from langchain.document_loaders import TextLoader
-from langchain.document_loaders import DirectoryLoader
-
-from langchain.memory import ConversationBufferMemory
-
-from langchain.llms import HuggingFacePipeline
-
-import openai
 import os
 
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModel
-from transformers import pipeline
+from langchain.chains import ConversationalRetrievalChain
+from langchain.document_loaders import DirectoryLoader
+from langchain.embeddings import HuggingFaceInstructEmbeddings
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.llms import HuggingFacePipeline, OpenAI
+from langchain.memory import ChatMessageHistory, ConversationBufferMemory
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.vectorstores import FAISS
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
-PIPELINE_TYPE = {
-    'lmsys/vicuna-7b-v1.3': 'text-generation'
-}
+# Pipeline type dictionary
+PIPELINE_TYPE = {"lmsys/vicuna-7b-v1.3": "text-generation"}
 
-
-class LLMLangChainTutor():
-
-    #
-    def __init__(self, doc_loader='dir', embedding='openai', llm='openai', vector_store='faiss', langchain_mod='conversational_retrieval_qa', openai_key=None, embed_device='cuda',llm_device='cuda') -> None:
+class LLMLangChainTutor:
+    def __init__(
+        self,
+        doc_loader="dir",
+        embedding="openai",
+        llm="openai",
+        vector_store="faiss",
+        openai_key=None,
+        embed_device="cuda",
+        llm_device="cuda",
+        cache_dir = "~/.cache",
+    ) -> None:
         """LMChain Tutor initialization.
-
                 Args:
                     doc_loader: Loader for documents. Default is 'dir'.
                     embedding: Embedding model to embed document and queries. Default is 'openai'.
@@ -48,6 +43,7 @@ class LLMLangChainTutor():
         self.llm_name = llm
         self.embed_device = embed_device
         self.llm_device = llm_device
+        self.cache_dir = cache_dir
 
         self._document_loader(doc_loader=doc_loader)
         self._embedding_loader(embedding=embedding)
@@ -64,7 +60,7 @@ class LLMLangChainTutor():
         else:
             raise ArgumentError("Invalid document loader")
 
-    
+
     def _embedding_loader(self, embedding):
         """
         This function initializes the embedding model, and is the key part of our project.
@@ -74,13 +70,17 @@ class LLMLangChainTutor():
         Returns:
 
         """
-
-        if embedding == 'openai':
-            os.environ['OPENAI_API_KEY'] = self.openai_key
+        if embedding == "openai":
+            os.environ["OPENAI_API_KEY"] = self.openai_key
             self.embedding_model = OpenAIEmbeddings()
-        
-        elif embedding == 'instruct_embedding':
-            self.embedding_model = HuggingFaceInstructEmbeddings(query_instruction="Represent the query for retrieval: ", model_kwargs={'device':self.embed_device}, encode_kwargs={'batch_size':32})
+        elif embedding == "instruct_embedding":
+            self.embedding_model = HuggingFaceInstructEmbeddings(
+                query_instruction="Represent the query for retrieval: ",
+                model_kwargs={"device": self.embed_device,                 
+                },
+                encode_kwargs={"batch_size": 32},
+                cache_folder = self.cache_dir
+            )
 
         # TODO: Add more embedding models here
     
@@ -95,37 +95,58 @@ class LLMLangChainTutor():
 
     def _memory_loader(self):
         """
-        Buffer to store conversation chatbot's converstational history
+            Buffer to store conversation chatbot's converstational history
         """
-        self.memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
+        self.memory = ConversationBufferMemory(
+            memory_key="chat_history", return_messages=True
+        )
 
     def conversational_qa_init(self):
         '''
         Creates a 'qa' object of type ConversationalRetrievalChain, which creates response to given queries based on
         retreived documents from the vector store.
         '''
-        if self.llm_name == 'openai':
-            self.qa = ConversationalRetrievalChain.from_llm(OpenAI(temperature=0), self.gen_vectorstore.as_retriever(), memory=self.memory, return_source_documents=True)
-
+        self.first_conversation = True
+        if self.llm_name == "openai":
+            self.qa = ConversationalRetrievalChain.from_llm(
+                OpenAI(temperature=0),
+                self.gen_vectorstore.as_retriever(),
+                memory=self.memory,
+                return_source_documents=True,
+            )
+        
         # If we choose an LLM from HuggingFace
-        elif self.llm_name.startswith('hf'):
-            llm_name = self.llm_name.split('_')[-1]
+        elif self.llm_name.startswith("hf"):
+            llm_name = self.llm_name.split("_")[-1]
             # Initialize llm
             llm = HuggingFacePipeline.from_model_id(
                 model_id=llm_name,
-                task="text-generation",#"text2text-generation",#,
-                model_kwargs={"temperature": 0.7, "max_length": 32, "torch_dtype": torch.float16},
-                pipeline_kwargs={'max_new_tokens':32},
-                device=self.llm_device ### self.device
+                task="text-generation",  # "text2text-generation",#,
+                model_kwargs={
+                    "temperature": 0.7,
+                    "max_length": 32,
+                    "torch_dtype": torch.float16,
+                    "cache_dir" : self.cache_dir
+                },
+                pipeline_kwargs={"max_new_tokens": 32},
+                device=self.llm_device,  ### self.device
             )
+            
             # Load buffer memory for conversation
-            self.memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True, output_key='answer')
+            self.memory = ConversationBufferMemory(
+                memory_key="chat_history", return_messages=True, output_key="answer"
+            )
 
             # **qa** object gets created here, which takes in llm for text generation, vector store for document embeddings
             # and memory for conversation history
-            self.qa = ConversationalRetrievalChain.from_llm(llm, self.gen_vectorstore.as_retriever(), memory=self.memory, return_source_documents=True)
+            self.qa = ConversationalRetrievalChain.from_llm(
+                llm,
+                self.gen_vectorstore.as_retriever(),
+                memory=self.memory,
+                return_source_documents=True,
+            )
 
-    def load_document(self, doc_path, glob='*.pdf', chunk_size=400, chunk_overlap=0):
+    def load_document(self, doc_path, glob="*.pdf", chunk_size=400, chunk_overlap=0):
         '''
         Loads document from the given path and splits it into chunks of given size and overlap.
         Args:
@@ -134,44 +155,55 @@ class LLMLangChainTutor():
                (all files except hidden).
             chunk_size: Size of tokens in each chunk
             chunk_overlap: Number of overlapping chunks within consecutive documents.
-
         '''
-        docs = self.doc_loader(doc_path, glob=glob, show_progress=True, use_multithreading=True, max_concurrency=16).load() ### many doc loaders
+        docs = self.doc_loader(
+            doc_path,
+            glob=glob,
+            show_progress=True,
+            use_multithreading=True,
+            max_concurrency=16,
+        ).load()  ### many doc loaders
 
-        text_splitter = CharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap) ### hyperparams
+        text_splitter = CharacterTextSplitter(
+            chunk_size=chunk_size, chunk_overlap=chunk_overlap
+        )  ### hyperparams
         self.splitted_documents = text_splitter.split_documents(docs)
-    
+
     def generate_vector_store(self):
         """
         Generates vector store from the documents and embedding model
-
         """
-        self.gen_vectorstore = self.vector_store.from_documents(self.splitted_documents, self.embedding_model)
-    
+        self.gen_vectorstore = self.vector_store.from_documents(
+            self.splitted_documents, self.embedding_model
+        )
+
     def save_vector_store(self, folder_path):
         '''
         Saves vector store to the given path
-        Args:
-            folder_path: Path to save vector store.
-        Returns:
+            Args:
+                folder_path: Path to save vector store.
+            Returns:
         '''
         self.gen_vectorstore.save_local(folder_path=folder_path)
-    
+
     def load_vector_store(self, folder_path):
         '''Load vectors from existing folder_path'''
-        self.gen_vectorstore = self.vector_store.load_local(folder_path=folder_path, embeddings=self.embedding_model)
+        self.gen_vectorstore = self.vector_store.load_local(
+            folder_path=folder_path, embeddings=self.embedding_model
+        )
 
     def similarity_search_topk(self, query, k=4):
         '''Top k-similarity search'''
         retrieved_docs = self.gen_vectorstore.similarity_search(query, k=k)
-        
         return retrieved_docs
-    
+
     def similarity_search_thres(self, query, thres=0.8):
         '''Similarity search with which qualify threshold'''
-        retrieval_result  = self.gen_vectorstore.similarity_search_with_score(query, k=10)
+        retrieval_result = self.gen_vectorstore.similarity_search_with_score(
+            query, k=10
+        )
         retrieval_result = [d[0] for d in retrieval_result]
-        
+
         return retrieval_result
 
     def conversational_qa(self, user_input):
@@ -185,39 +217,45 @@ class LLMLangChainTutor():
         # return self.qa({'question': user_input})
         FIRST_PROMPT = "A chat between a student user and a teaching assistant. The assistant gives helpful, detailed, and polite answers to the user's questions based on the context.\n"
         PROMPT_TEMPLTATE = "CONTEXT: {context} \n USER: {user_input} \n ASSISTANT:"
-        context = " \n ".join([each.page_content for each in self.similarity_search(user_input, k=5)])
+        context = " \n ".join(
+            [each.page_content for each in self.similarity_search_topk(user_input, k=5)]
+        )
         if self.first_conversation:
-            prompt = FIRST_PROMPT + PROMPT_TEMPLTATE.format(context=context, user_input=user_input)
+            prompt = FIRST_PROMPT + PROMPT_TEMPLTATE.format(
+                context=context, user_input=user_input
+            )
             self.first_conversation = False
         else:
-            prompt = self.memory.messages[-1] + "\n\n " + PROMPT_TEMPLTATE.format(context=context, user_input=user_input)
-        
-        # inputs = self.tokenizer(prompt, return_tensors="pt").to(self.llm_device)
+            prompt = (
+                self.memory.messages[-1]
+                + "\n\n "
+                + PROMPT_TEMPLTATE.format(context=context, user_input=user_input)
+            )
 
-        # # Generate
-        # generate_ids = self.llm.generate(inputs.input_ids, max_length=30)
-        # output = self.tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
-
-        output = self.gen_pipe(prompt)[0]['generated_text']
-        self.memory.add_message(prompt+output)
+        output = self.qa({"question": prompt})
+        self.memory.add_message(prompt + output)
 
         return output
 
     def initialize_hf_llm(self):
         # Initialize llm
-        if not self.llm_name.startswith('hf'):
+        if not self.llm_name.startswith("hf"):
             raise NameError()
-        
-        llm_name = self.llm_name.split('_')[-1]
-        self.llm = AutoModelForCausalLM.from_pretrained(llm_name, temperature=0.7, torch_dtype=torch.float16).to(self.llm_device)
+
+        llm_name = self.llm_name.split("_")[-1]
+        self.llm = AutoModelForCausalLM.from_pretrained(
+            llm_name, temperature=0.7, torch_dtype=torch.float16
+        ).to(self.llm_device)
         self.tokenizer = AutoTokenizer.from_pretrained(llm_name)
 
-        self.gen_pipe = pipeline(PIPELINE_TYPE[llm_name], model=self.llm, tokenizer=self.tokenizer, device=self.llm_device, max_new_tokens=512, return_full_text=False)
+        self.gen_pipe = pipeline(
+            PIPELINE_TYPE[llm_name],
+            model=self.llm,
+            tokenizer=self.tokenizer,
+            device=self.llm_device,
+            max_new_tokens=512,
+            return_full_text=False,
+        )
 
         self.memory = ChatMessageHistory()
         self.first_conversation = True
-
-if __name__ == '__main__':
-    lmtutor = LLMLangChainTutor()
-    lmtutor.load_vector_store("/home/haozhang/axie/LMTutor/data/DSC-291-vector")
-    lmtutor.conversational_qa("What's the course?")

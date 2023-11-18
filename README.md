@@ -24,3 +24,14 @@ python dataset.py --dataset <dataset_name>
 3. 
 
 Note: For debugging purposes, you can set `--debug` flag to prepare a small subset of the dataset.
+
+
+# Run code
+```bash
+python run.py --prompt "what's the course about?" --prepare_dataset
+```
+
+# Run in debug mode
+```bash 
+python run.py --prompt "what's the course about?" --prepare_dataset --debug
+```
