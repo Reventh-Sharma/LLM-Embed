@@ -4,18 +4,18 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        {
-            "name": "Prepare SQuAD dataset",
-            "type": "python",
-            "request": "launch",
-            "program": "dataset.py",
-            "args": [
-                "--dataset",
-                "squad"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
+        // {
+        //     "name": "Prepare SQuAD dataset",
+        //     "type": "python",
+        //     "request": "launch",
+        //     "program": "dataset.py",
+        //     "args": [
+        //         "--debug",
+        //         "squad"
+        //     ],
+        //     "console": "integratedTerminal",
+        //     "justMyCode": true
+        // },
         {
             "name": "Run LMTutor",
             "type": "python",
@@ -23,7 +23,8 @@
             "program": "run.py",
             "args": [
                 "--prompt",
-                "what's the course about?"
+                "what's the course about?",
+                "--debug"
             ]
         }
     ]

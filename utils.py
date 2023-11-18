@@ -27,3 +27,34 @@ def get_cache_dir(base_dir="/scratch"):
         cache_dir = f"~/.cache/"
 
     return cache_dir
+
+def get_document_folder(base_data_dir, dataset_name, debug=False):
+    if debug:
+        file_name = os.path.join(base_data_dir, f"{dataset_name}-debug", "train", "documents")
+    else:
+        file_name = os.path.join(base_data_dir, dataset_name, "train", "documents")
+    
+    # create directory if it doesn't exist
+    os.makedirs(file_name, exist_ok=True)
+    return file_name
+
+def get_qa_file(base_data_dir, dataset_name, debug=False):
+    if debug:
+        file_name = os.path.join(base_data_dir, f"{dataset_name}-debug", "train", "train.csv")
+    else:
+        file_name = os.path.join(base_data_dir, dataset_name, "train", "train.csv")
+
+    # create parent directory if it doesn't exist
+    os.makedirs(os.path.dirname(file_name), exist_ok=True)
+    return file_name
+
+def get_vector_file(base_data_dir, dataset_name, debug=False):
+    if debug:
+        file_name = os.path.join(base_data_dir, f"{dataset_name}-vector-debug")
+    else:
+        file_name = os.path.join(base_data_dir, f"{dataset_name}-vector")
+
+    # create parent directory if it doesn't exist
+    os.makedirs(os.path.dirname(file_name), exist_ok=True)
+    return file_name
+

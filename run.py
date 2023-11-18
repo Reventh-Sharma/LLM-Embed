@@ -1,32 +1,17 @@
 import argparse
+import os
+
+from dataset import prepare_data
 from model.llm_langchain_tutor import LLMLangChainTutor
-from utils import get_cache_dir
+from utils import get_cache_dir, get_document_folder, get_vector_file
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
 
     # dataset preparation arguments
-    parser.add_argument("--dataset", type=str, default="standqa")
-
-    # vector store arguments
-    parser.add_argument(
-        "--create_vector_store",
-        action="store_true",
-        help="If true, create vector store from documents",
-    )
-    parser.add_argument(
-        "--vec_folder",
-        type=str,
-        default="data/DSC-250-vector/",
-        help="Path to folder which contains vector store or where vector store will be saved",
-    )
-    parser.add_argument(
-        "--doc_folder",
-        type=str,
-        default="data/DSC-250/",
-        help="Path to folder containing documents",
-    )
+    parser.add_argument("--prepare_dataset", action="store_true")
+    parser.add_argument("--dataset_name", type=str, default="squad")
 
     # conversation arguments
     parser.add_argument(
@@ -39,10 +24,10 @@ def parse_args():
 
     # runtime arguments
     parser.add_argument(
-        "--base_dir",
+        "--base_data_dir",
         type=str,
         default=get_cache_dir(),
-        help="Path to folder containing documents",
+        help="Path to folder containing data",
     )
     parser.add_argument("--llm_device", type=str, default="cuda:0")
     parser.add_argument("--embed_device", type=str, default="cuda:0")
@@ -59,18 +44,23 @@ def parse_args():
 
 
 def main(
-    prompt,
+    dataset_name,
     embedding_model,
     llm_model,
-    vec_folder,
-    create_vector_store=False,
-    doc_folder=None,
+    prompt,
+    base_data_dir,
+    prepare_dataset=False,
     llm_device="cuda:0",
     embed_device="cuda:0",
+    debug=False,
 ):
     # Prepare dataset
-    
-
+    doc_folder = get_document_folder(base_data_dir, dataset_name, debug)
+    if prepare_dataset:
+        print("Preparing dataset...")
+        prepare_data(dataset_name, base_data_dir, debug)
+    else:
+        print("Dataset preparation skipped.")
 
     # Create LLMLangChainTutor
     lmtutor = LLMLangChainTutor(
@@ -78,17 +68,21 @@ def main(
         llm=llm_model,
         embed_device=embed_device,
         llm_device=llm_device,
+        cache_dir=base_data_dir,
     )
 
     # If vector store is not created, load vector store
-    if create_vector_store:
+    vec_file = get_vector_file(base_data_dir, dataset_name, debug)
+    if not os.path.exists(vec_file):
+        print("Creating vector store...")
         lmtutor.load_document(
-            doc_path=doc_folder, glob="*.pdf", chunk_size=400, chunk_overlap=10
+            doc_path=doc_folder, glob="*.txt", chunk_size=400, chunk_overlap=10
         )
         lmtutor.generate_vector_store()
-        lmtutor.save_vector_store(vec_folder)
+        lmtutor.save_vector_store(vec_file)
     else:
-        lmtutor.load_vector_store(vec_folder)
+        print("Loading vector store...")
+        lmtutor.load_vector_store(vec_file)
 
     lmtutor.conversational_qa_init()
     lmtutor.conversational_qa(user_input=prompt)
