@@ -182,7 +182,7 @@ class LLMLangChainTutor:
                 + PROMPT_TEMPLTATE.format(context=context, user_input=user_input)
             )
 
-        output = self.gen_pipe(prompt)[0]["generated_text"]
+        output = self.qa({"question": prompt})
         self.memory.add_message(prompt + output)
 
         return output

@@ -85,7 +85,8 @@ def main(
         lmtutor.load_vector_store(vec_file)
 
     lmtutor.conversational_qa_init()
-    lmtutor.conversational_qa(user_input=prompt)
+    output = lmtutor.conversational_qa(user_input=prompt)
+    print(output)
 
 
 if __name__ == "__main__":
