@@ -1,4 +1,4 @@
-langchain==0.0.170
+langchain
 openai
 faiss-cpu
 streamlit
@@ -10,3 +10,6 @@ torchvision
 torchaudio
 datasets
 black
+unstructured
+unstructured[pdf]
+sentence_transformers
