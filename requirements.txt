@@ -1,7 +1,15 @@
-langchain==0.0.170
+langchain
 openai
 faiss-cpu
 streamlit
 streamlit-chat
 tiktoken
 transformers
+torch 
+torchvision 
+torchaudio
+datasets
+black
+unstructured
+unstructured[pdf]
+sentence_transformers
