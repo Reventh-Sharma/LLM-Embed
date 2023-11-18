@@ -27,7 +27,23 @@ PIPELINE_TYPE = {
 
 
 class LLMLangChainTutor():
+
+    #
     def __init__(self, doc_loader='dir', embedding='openai', llm='openai', vector_store='faiss', langchain_mod='conversational_retrieval_qa', openai_key=None, embed_device='cuda',llm_device='cuda') -> None:
+        """LMChain Tutor initialization.
+
+                Args:
+                    doc_loader: Loader for documents. Default is 'dir'.
+                    embedding: Embedding model to embed document and queries. Default is 'openai'.
+                    llm: Language model for generating results for query output. Default is 'openai'.
+                    vector_store: Vector store to store embeddings and associated documents. Default is 'faiss'.
+                    langchain_mod: Language chain model to use. Default is 'conversational_retrieval_qa'. TODO: I didn't understand what this does
+                    openai_key: Key for openai, out of scope for now.
+                    embed_device: Device to use for embedding. Default is 'cuda'.
+                    llm_device: Device to use for llm. Default is 'cuda'.
+
+                Returns:
+        """
         self.openai_key = openai_key
         self.llm_name = llm
         self.embed_device = embed_device
@@ -39,23 +55,48 @@ class LLMLangChainTutor():
         self._memory_loader()
 
     def _document_loader(self, doc_loader):
+        """
+        Args:
+            doc_loader: Loader for documents, currently only supports 'dir'.
+        """
         if doc_loader == 'dir':
             self.doc_loader = DirectoryLoader
+        else:
+            raise ArgumentError("Invalid document loader")
+
     
     def _embedding_loader(self, embedding):
+        """
+        This function initializes the embedding model, and is the key part of our project.
+        Args:
+            embedding: Embedding model to embed document and queries
+
+        Returns:
+
+        """
+
         if embedding == 'openai':
             os.environ['OPENAI_API_KEY'] = self.openai_key
             self.embedding_model = OpenAIEmbeddings()
         
         elif embedding == 'instruct_embedding':
             self.embedding_model = HuggingFaceInstructEmbeddings(query_instruction="Represent the query for retrieval: ", model_kwargs={'device':self.embed_device}, encode_kwargs={'batch_size':32})
+
+        # TODO: Add more embedding models here
     
     
     def _vectorstore_loader(self, vector_store):
+        """
+        Args:
+            vector_store: Vector store to store embeddings and associated documents. Default is 'faiss'.
+        """
         if vector_store == 'faiss':
             self.vector_store = FAISS
 
     def _memory_loader(self):
+        """
+        Buffer to store conversation chatbot's converstational history
+        """
         self.memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
 
     def conversational_qa_init(self):
@@ -139,6 +180,3 @@ if __name__ == '__main__':
     lmtutor = LLMLangChainTutor()
     lmtutor.load_vector_store("/home/haozhang/axie/LMTutor/data/DSC-291-vector")
     lmtutor.conversational_qa("What's the course?")
-
-        
-    
