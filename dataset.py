@@ -4,12 +4,15 @@ import argparse
 from tqdm import tqdm
 from datasets import load_dataset
 
-DATA_DIR = "data"
-
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="standqa")
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default="data",
+        help="Path to folder containing documents",
+    )
     parser.add_argument(
         "--debug",
         action="store_true",
@@ -60,7 +63,7 @@ def prepare_squad_dataset(debug=False):
             f.write(f"{question},{answer['text'][0]},{context_id_}\n")
 
 
-def prepare_data(dataset_name, debug=False):
+def prepare_data(dataset_name, base_dir, debug=False):
     """
     Parameters:
         dataset_name: name of the dataset

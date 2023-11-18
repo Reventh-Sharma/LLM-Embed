@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Prepare SQuAD dataset",
             "type": "python",
             "request": "launch",
             "program": "dataset.py",
@@ -15,6 +15,16 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "Run LMTutor",
+            "type": "python",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "--prompt",
+                "what's the course about?"
+            ]
         }
     ]
 }
