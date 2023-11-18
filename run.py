@@ -29,8 +29,8 @@ def parse_args():
         default=get_cache_dir(),
         help="Path to folder containing data",
     )
-    parser.add_argument("--llm_device", type=str, default="cuda:0")
-    parser.add_argument("--embed_device", type=str, default="cuda:0")
+    parser.add_argument("--llm_device", type=str, default=0)
+    parser.add_argument("--embed_device", type=str, default=0)
     parser.add_argument(
         "--debug",
         action="store_true",

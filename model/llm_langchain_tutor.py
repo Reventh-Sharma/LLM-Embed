@@ -92,6 +92,7 @@ class LLMLangChainTutor:
         )
 
     def conversational_qa_init(self):
+        self.first_conversation = True
         if self.llm_name == "openai":
             self.qa = ConversationalRetrievalChain.from_llm(
                 OpenAI(temperature=0),
@@ -99,7 +100,6 @@ class LLMLangChainTutor:
                 memory=self.memory,
                 return_source_documents=True,
             )
-
         elif self.llm_name.startswith("hf"):
             llm_name = self.llm_name.split("_")[-1]
             llm = HuggingFacePipeline.from_model_id(
