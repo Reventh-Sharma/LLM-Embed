@@ -1,4 +1,5 @@
-from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.metrics import precision_score, recall_score, f1_score, \
+                            accuracy_score
 
 
 class EmbeddingModelMetrics:
@@ -14,3 +15,6 @@ class EmbeddingModelMetrics:
 
     def calculate_f1_score(self):
         return f1_score(self.true_labels, self.predicted_labels, average='weighted')
+
+    def calculate_accuracy(self):
+        return accuracy_score(self.true_labels, self.predicted_labels)
