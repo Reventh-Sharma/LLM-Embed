@@ -14,19 +14,3 @@ class EmbeddingModelMetrics:
 
     def calculate_f1_score(self):
         return f1_score(self.true_labels, self.predicted_labels, average='weighted')
-
-# Toy data for testing
-true_labels = [1, 0, 1, 1, 0, 1, 0, 1, 0, 0]
-predicted_labels = [1, 1, 0, 1, 0, 0, 1, 1, 0, 0]
-
-# Create an instance of the EmbeddingModelMetrics class
-metrics_calculator = EmbeddingModelMetrics(true_labels, predicted_labels)
-
-# Calculate and print precision, recall, and F1-score
-precision = metrics_calculator.calculate_precision()
-recall = metrics_calculator.calculate_recall()
-f1_score = metrics_calculator.calculate_f1_score()
-
-print("Precision:", precision)
-print("Recall:", recall)
-print("F1 Score:", f1_score)
