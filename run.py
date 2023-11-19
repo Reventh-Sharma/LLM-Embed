@@ -1,10 +1,12 @@
 import argparse
 import os
 
-from dataset import prepare_data
+from dataset import prepare_data, get_parsed_data
 from model.llm_langchain_tutor import LLMLangChainTutor
 from utils import get_cache_dir, get_document_folder, get_vector_file
 from metrics import EmbeddingModelMetrics
+from loguru import logger
+from tqdm import tqdm
 
 
 def parse_args():
@@ -56,7 +58,6 @@ def main(
     debug=False,
 ):
     # Prepare dataset
-    doc_folder = get_document_folder(base_data_dir, dataset_name, debug)
     if prepare_dataset:
         print("Preparing dataset...")
         prepare_data(dataset_name, base_data_dir, debug)
@@ -70,43 +71,66 @@ def main(
         embed_device=embed_device,
         llm_device=llm_device,
         cache_dir=base_data_dir,
+        debug=debug,
     )
 
-    # If vector store is not created, load vector store
+    # Create vector store if not exists, otherwise load vector store
+    doc_folder = get_document_folder(base_data_dir, dataset_name, debug)
     vec_file = get_vector_file(base_data_dir, dataset_name, debug)
     if not os.path.exists(vec_file):
-        print("Creating vector store...")
-        lmtutor.load_document(
-            doc_path=doc_folder, glob="*.txt", chunk_size=400, chunk_overlap=10
+        logger.info("Creating vector store...")
+        lmtutor.generate_vector_store(
+            doc_folder, vec_file, glob="*.txt", chunk_size=400, chunk_overlap=10
         )
-        lmtutor.generate_vector_store()
-        lmtutor.save_vector_store(vec_file)
     else:
-        print("Loading vector store...")
+        logger.info("Loading vector store...")
         lmtutor.load_vector_store(vec_file)
 
+    # Dataset format: [question, answer, context_id]
+    dataset = get_parsed_data(dataset_name, base_data_dir=base_data_dir, debug=debug)
+
+    # Analyze embeddings
+    # iterate over (question, context_id) pairs
+    accuracy = 0
+    for _, row in tqdm(dataset.iterrows(), total=len(dataset)):
+        question = row["question"]
+        doc_id = row["doc_id"]
+
+        # get context from context_id
+        relevant_documents = lmtutor.similarity_search_topk(question)
+        relevant_documents_ids = [
+            int(doc.metadata["source"].split("/")[-1].split(".")[0])
+            for doc in relevant_documents
+        ]
+        accuracy += 1 if doc_id in relevant_documents_ids else 0
+
+    # print accuracy
+    logger.info(f"Top-k accuracy: {accuracy/len(dataset) * 100.0}%")
+
+    # Initialize and start conversation
     lmtutor.conversational_qa_init()
     output = lmtutor.conversational_qa(user_input=prompt)
-    print(output)
+    logger.info(output)
 
-    #change predicted and true to ground truth
-    true_labels = [0, 1, 0, 1, 1, 0, 1, 0, 1, 0]
+    # change predicted and true to ground truth
+    # true_labels = [0, 1, 0, 1, 1, 0, 1, 0, 1, 0]
 
-    predicted_labels = [1, 1, 0, 1, 0, 0, 1, 1, 0, 0]
+    # predicted_labels = [1, 1, 0, 1, 0, 0, 1, 1, 0, 0]
 
-    # Create an instance of EmbeddingModelMetrics
-    metrics_calculator = EmbeddingModelMetrics(true_labels, predicted_labels)
+    # # Create an instance of EmbeddingModelMetrics
+    # metrics_calculator = EmbeddingModelMetrics(true_labels, predicted_labels)
 
-    # Calculate and print precision, recall, and F1-score
-    precision = metrics_calculator.calculate_precision()
-    recall = metrics_calculator.calculate_recall()
-    f1_score = metrics_calculator.calculate_f1_score()
+    # # Calculate and print precision, recall, and F1-score
+    # precision = metrics_calculator.calculate_precision()
+    # recall = metrics_calculator.calculate_recall()
+    # f1_score = metrics_calculator.calculate_f1_score()
 
-    print("Precision:", precision)
-    print("Recall:", recall)
-    print("F1 Score:", f1_score)
+    # print("Precision:", precision)
+    # print("Recall:", recall)
+    # print("F1 Score:", f1_score)
 
 
 if __name__ == "__main__":
     args = parse_args()
+    logger.info(args)
     main(**args.__dict__)

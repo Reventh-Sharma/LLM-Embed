@@ -3,7 +3,7 @@ from model.llm_langchain_tutor import LLMLangChainTutor
 
 def generate_vectorstore(doc_folder, vec_folder):
     lmtutor = LLMLangChainTutor(embedding='instruct_embedding', llm='hf_lmsys/vicuna-7b-v1.3', embed_device='cuda:0')
-    lmtutor.load_document(doc_path=doc_folder, glob='*.pdf', chunk_size=400, chunk_overlap=10)
+    lmtutor._load_document(doc_path=doc_folder, glob='*.pdf', chunk_size=400, chunk_overlap=10)
     lmtutor.generate_vector_store()
     lmtutor.save_vector_store(vec_folder)
 
