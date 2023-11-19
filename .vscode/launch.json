@@ -24,6 +24,8 @@
             "args": [
                 "--prompt",
                 "what's the course about?",
+                "--embedding_model",
+                "hf_lmsys/vicuna-7b-v1.3",
                 "--prepare_dataset",
                 "--debug"
             ]
