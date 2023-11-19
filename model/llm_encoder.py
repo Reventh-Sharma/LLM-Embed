@@ -4,27 +4,21 @@ from langchain.embeddings.base import Embeddings
 from langchain.pydantic_v1 import BaseModel, Extra, Field
 from transformers import AutoModel, AutoTokenizer
 
-DEFAULT_MODEL_NAME = "lmsys/vicuna-13b-v1.5-16k"
 
-class LLMBasedEmbeddings(BaseModel, Embeddings):
-    model_name: str = DEFAULT_MODEL_NAME
-    """Model name to use."""
-
-    def __init__(self, encodingmodel=model_name, **kwargs):
-        super().__init__(**kwargs)
+class LLMBasedEmbeddings(Embeddings):
+    def __init__(self, encoding_model, device, aggregation="mean", token=None, hidden_state_id=-1):
         """Initialize the encoding model."""
-        self.device = kwargs.get('device', 'cpu')
-        self.aggregation = kwargs.get('aggr', 'mean')
-        self.model = AutoModel.from_pretrained(encodingmodel,
-                                               use_auth_token=kwargs.get('token', ''),
-                                               output_hidden_states=True).to(self.device)
-
-        self.tokenizer = AutoTokenizer.from_pretrained(encodingmodel,
-                                                       token=kwargs.get('token', ''),
-                                                       device=self.device)
-
-    class Config:
-        extra = "allow"
+        self.aggregation = aggregation
+        self.device = device
+        self.hidden_state_id = hidden_state_id
+        self.model = AutoModel.from_pretrained(
+            encoding_model,
+            use_auth_token=token,
+            output_hidden_states=True,
+        ).to(self.device)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            encoding_model, token=token, device=self.device
+        )
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Compute doc embeddings using a LLM model.
@@ -37,17 +31,64 @@ class LLMBasedEmbeddings(BaseModel, Embeddings):
         """
 
         texts = list(map(lambda x: x.replace("\n", " "), texts))
-        if self.aggregation=='max':
-            embeddings = [self.model(
-                self.tokenizer(text, return_tensors="pt")["input_ids"].to(self.device))
-                          ["last_hidden_state"]
-                          .max(axis=1).values[0].detach().numpy() for text in texts]
+        
+        # Example Architecture:
+        # LlamaModel(
+        #   (embed_tokens): Embedding(32000, 4096, padding_idx=0)
+        #   (layers): ModuleList(
+        #     (0-31): 32 x LlamaDecoderLayer(
+        #       (self_attn): LlamaAttention(
+        #         (q_proj): Linear(in_features=4096, out_features=4096, bias=False)
+        #         (k_proj): Linear(in_features=4096, out_features=4096, bias=False)
+        #         (v_proj): Linear(in_features=4096, out_features=4096, bias=False)
+        #         (o_proj): Linear(in_features=4096, out_features=4096, bias=False)
+        #         (rotary_emb): LlamaRotaryEmbedding()
+        #       )
+        #       (mlp): LlamaMLP(
+        #         (gate_proj): Linear(in_features=4096, out_features=11008, bias=False)
+        #         (up_proj): Linear(in_features=4096, out_features=11008, bias=False)
+        #         (down_proj): Linear(in_features=11008, out_features=4096, bias=False)
+        #         (act_fn): SiLUActivation()
+        #       )
+        #       (input_layernorm): LlamaRMSNorm()
+        #       (post_attention_layernorm): LlamaRMSNorm()
+        #     )
+        #   )
+        #   (norm): LlamaRMSNorm()
+        # )
+        # Output shape in each layer: (batch_size, sequence_length, 4096)
+        # There are 33 layers in total, including the embedding layer.
+        # Size of output['hidden_states']: 33
 
+        if self.aggregation == "max":
+            embeddings = [
+                self.model(
+                    self.tokenizer(text, return_tensors="pt")["input_ids"].to(
+                        self.device
+                    )
+                )["hidden_states"][self.hidden_state_id]
+                .max(axis=1)
+                .values[0]
+                .cpu()
+                .detach()
+                .numpy()
+                for text in texts
+            ]
+        elif self.aggregation == "mean":
+            embeddings = [
+                self.model(
+                    self.tokenizer(text, return_tensors="pt")["input_ids"].to(
+                        self.device
+                    )
+                )["hidden_states"][self.hidden_state_id]
+                .mean(axis=[0, 1])
+                .cpu()
+                .detach()
+                .numpy()
+                for text in texts
+            ]
         else:
-            embeddings = [self.model(
-                self.tokenizer(text, return_tensors="pt")["input_ids"].to(self.device))
-                          ["last_hidden_state"]
-                          .mean(axis=[0, 1]).detach().numpy() for text in texts]
+            raise NotImplementedError
 
         return embeddings
 

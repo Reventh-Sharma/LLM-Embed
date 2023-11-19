@@ -1,12 +1,11 @@
 import os
 
 import torch
-from langchain.chains import ConversationalRetrievalChain
 from langchain.document_loaders import DirectoryLoader
 from langchain.embeddings import HuggingFaceInstructEmbeddings
 from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.llms import HuggingFacePipeline, OpenAI
-from langchain.memory import ConversationBufferMemory, ChatMessageHistory
+from langchain.llms import OpenAI
+from langchain.memory import ChatMessageHistory
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import FAISS
 
@@ -28,7 +27,7 @@ class LLMLangChainTutor:
         llm="openai",
         vector_store="faiss",
         openai_key=None,
-        token= None,
+        token=None,
         embed_device="cuda",
         llm_device="cuda",
         cache_dir="~/.cache",
@@ -90,11 +89,13 @@ class LLMLangChainTutor:
                 encode_kwargs={"batch_size": 32},
                 cache_folder=self.cache_dir,
             )
-        elif embedding.startswith("hf"): # If an LLM is chosen from HuggingFace
+        elif embedding.startswith("hf"):  # If an LLM is chosen from HuggingFace
             llm_name = embedding.split("_")[-1]
-            self.embedding_model = LLMBasedEmbeddings(llm_name, device = self.llm_device,
-                                                      aggr = self.aggregation,
-                                                      token = self.token)
+            self.embedding_model = LLMBasedEmbeddings(
+                llm_name,
+                device=self.llm_device,
+                token=self.token,
+            )
         else:
             raise NotImplementedError
 

@@ -72,6 +72,7 @@ def main(
         llm_device=llm_device,
         cache_dir=base_data_dir,
         debug=debug,
+        token = "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",
     )
 
     # Create vector store if not exists, otherwise load vector store
