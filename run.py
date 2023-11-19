@@ -90,9 +90,12 @@ def main(
     # Dataset format: [question, answer, context_id]
     dataset = get_parsed_data(dataset_name, base_data_dir=base_data_dir, debug=debug)
 
-    # Analyze embeddings
+    # # Analyze embeddings
+
+    # Initialize instance of EmbeddingModelMetrics
+    metrics_calculator = EmbeddingModelMetrics()
+
     # iterate over (question, context_id) pairs
-    accuracy = 0
     for _, row in tqdm(dataset.iterrows(), total=len(dataset)):
         question = row["question"]
         doc_id = row["doc_id"]
@@ -103,32 +106,26 @@ def main(
             int(doc.metadata["source"].split("/")[-1].split(".")[0])
             for doc in relevant_documents
         ]
-        accuracy += 1 if doc_id in relevant_documents_ids else 0
+
+        # Update counters based on the top-k logic
+        metrics_calculator.update(doc_id in relevant_documents_ids)
+
+    # Calculate precision, recall, and F1-score
+    precision = metrics_calculator.calculate_precision()
+    recall = metrics_calculator.calculate_recall()
+    f1_score = metrics_calculator.calculate_f1_score()
+    accuracy = metrics_calculator.calculate_accuracy()
 
     # print accuracy
-    logger.info(f"Top-k accuracy: {accuracy/len(dataset) * 100.0}%")
+    logger.info(f"Top-k accuracy: {accuracy / len(dataset) * 100.0}%")
+    logger.info(f"Precision: {precision}")
+    logger.info(f"Recall: {recall}")
+    logger.info(f"F1 Score: {f1_score}")
 
     # Initialize and start conversation
     lmtutor.conversational_qa_init()
     output = lmtutor.conversational_qa(user_input=prompt)
     logger.info(output)
-
-    # change predicted and true to ground truth
-    # true_labels = [0, 1, 0, 1, 1, 0, 1, 0, 1, 0]
-
-    # predicted_labels = [1, 1, 0, 1, 0, 0, 1, 1, 0, 0]
-
-    # # Create an instance of EmbeddingModelMetrics
-    # metrics_calculator = EmbeddingModelMetrics(true_labels, predicted_labels)
-
-    # # Calculate and print precision, recall, and F1-score
-    # precision = metrics_calculator.calculate_precision()
-    # recall = metrics_calculator.calculate_recall()
-    # f1_score = metrics_calculator.calculate_f1_score()
-
-    # print("Precision:", precision)
-    # print("Recall:", recall)
-    # print("F1 Score:", f1_score)
 
 
 if __name__ == "__main__":
