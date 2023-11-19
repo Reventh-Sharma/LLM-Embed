@@ -110,13 +110,13 @@ def main(
         # Update counters based on the top-k logic
         metrics_calculator.update(doc_id in relevant_documents_ids)
 
-    # Calculate precision, recall, and F1-score
+    # Calculate metrics
     precision = metrics_calculator.calculate_precision()
     recall = metrics_calculator.calculate_recall()
     f1_score = metrics_calculator.calculate_f1_score()
     accuracy = metrics_calculator.calculate_accuracy()
 
-    # print accuracy
+    # print metrics
     logger.info(f"Top-k accuracy: {accuracy / len(dataset) * 100.0}%")
     logger.info(f"Precision: {precision}")
     logger.info(f"Recall: {recall}")
