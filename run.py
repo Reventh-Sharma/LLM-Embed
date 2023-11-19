@@ -4,6 +4,7 @@ import os
 from dataset import prepare_data
 from model.llm_langchain_tutor import LLMLangChainTutor
 from utils import get_cache_dir, get_document_folder, get_vector_file
+from metrics import EmbeddingModelMetrics
 
 
 def parse_args():
@@ -87,6 +88,23 @@ def main(
     lmtutor.conversational_qa_init()
     output = lmtutor.conversational_qa(user_input=prompt)
     print(output)
+
+    #change predicted and true to ground truth
+    true_labels = [0, 1, 0, 1, 1, 0, 1, 0, 1, 0]
+
+    predicted_labels = [1, 1, 0, 1, 0, 0, 1, 1, 0, 0]
+
+    # Create an instance of EmbeddingModelMetrics
+    metrics_calculator = EmbeddingModelMetrics(true_labels, predicted_labels)
+
+    # Calculate and print precision, recall, and F1-score
+    precision = metrics_calculator.calculate_precision()
+    recall = metrics_calculator.calculate_recall()
+    f1_score = metrics_calculator.calculate_f1_score()
+
+    print("Precision:", precision)
+    print("Recall:", recall)
+    print("F1 Score:", f1_score)
 
 
 if __name__ == "__main__":
