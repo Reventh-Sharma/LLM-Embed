@@ -40,9 +40,9 @@ def get_document_folder(base_data_dir, dataset_name, debug=False):
 
 def get_qa_file(base_data_dir, dataset_name, debug=False):
     if debug:
-        file_name = os.path.join(base_data_dir, f"{dataset_name}-debug", "train", "train.csv")
+        file_name = os.path.join(base_data_dir, f"{dataset_name}-debug", "train", "train.tsv")
     else:
-        file_name = os.path.join(base_data_dir, dataset_name, "train", "train.csv")
+        file_name = os.path.join(base_data_dir, dataset_name, "train", "train.tsv")
 
     # create parent directory if it doesn't exist
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
@@ -53,6 +53,16 @@ def get_vector_file(base_data_dir, dataset_name, debug=False):
         file_name = os.path.join(base_data_dir, f"{dataset_name}-vector-debug")
     else:
         file_name = os.path.join(base_data_dir, f"{dataset_name}-vector")
+
+    # create parent directory if it doesn't exist
+    os.makedirs(os.path.dirname(file_name), exist_ok=True)
+    return file_name
+
+def get_context_id_file(base_data_dir, dataset_name, debug=False):
+    if debug:
+        file_name = os.path.join(base_data_dir, f"{dataset_name}-debug", "train", "context_id.tsv")
+    else:
+        file_name = os.path.join(base_data_dir, dataset_name, "train", "context_id.tsv")
 
     # create parent directory if it doesn't exist
     os.makedirs(os.path.dirname(file_name), exist_ok=True)

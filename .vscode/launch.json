@@ -24,6 +24,7 @@
             "args": [
                 "--prompt",
                 "what's the course about?",
+                "--prepare_dataset",
                 "--debug"
             ]
         }
