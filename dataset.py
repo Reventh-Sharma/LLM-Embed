@@ -6,6 +6,8 @@ from datasets import load_dataset
 
 from utils import get_cache_dir, get_document_folder, get_qa_file
 
+from hf_data_prep import load_hf_dataset_to_pandas
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -74,8 +76,8 @@ def prepare_data(dataset_name, base_data_dir, debug=False):
     """
     if dataset_name == "squad":
         prepare_squad_dataset(base_data_dir, debug)
-    elif dataset_name == "mathdial":
-        pass
+    elif dataset_name == "quac" or dataset_name == "b-mc2/sql-create-context":
+        load_hf_dataset_to_pandas(dataset_name)
     else:
         raise ValueError("Dataset name not found")
 
