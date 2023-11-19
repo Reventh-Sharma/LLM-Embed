@@ -11,6 +11,8 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import FAISS
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
+from model.llm_encoder import LLMBasedEmbeddings
+
 # Pipeline type dictionary
 PIPELINE_TYPE = {"lmsys/vicuna-7b-v1.3": "text-generation"}
 
@@ -22,6 +24,7 @@ class LLMLangChainTutor:
         llm="openai",
         vector_store="faiss",
         openai_key=None,
+        token= None,
         embed_device="cuda",
         llm_device="cuda",
         cache_dir = "~/.cache",
@@ -40,6 +43,7 @@ class LLMLangChainTutor:
                 Returns:
         """
         self.openai_key = openai_key
+        self.token = token
         self.llm_name = llm
         self.embed_device = embed_device
         self.llm_device = llm_device
@@ -81,9 +85,13 @@ class LLMLangChainTutor:
                 encode_kwargs={"batch_size": 32},
                 cache_folder = self.cache_dir
             )
+        elif embedding.startswith("hf"): # If an LLM is chosen from HuggingFace
+            llm_name = embedding.split("_")[-1]
+            self.embedding_model = LLMBasedEmbeddings(llm_name, device = self.llm_device,
+                                                      aggr = self.aggregation,
+                                                      token = self.token)
 
-        # TODO: Add more embedding models here
-    
+
     
     def _vectorstore_loader(self, vector_store):
         """
@@ -232,9 +240,11 @@ class LLMLangChainTutor:
                 + PROMPT_TEMPLTATE.format(context=context, user_input=user_input)
             )
 
-        output = self.qa({"question": prompt})
-        self.memory.add_message(prompt + output)
+        # output = self.qa({"question": prompt})
+        # self.memory.add_message(prompt + output)
 
+        # output = self.gen_pipe(prompt)[0]['generated_text']
+        # self.memory.add_message(prompt + output)
         return output
 
     def initialize_hf_llm(self):
