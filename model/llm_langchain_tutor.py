@@ -14,6 +14,8 @@ from langchain.vectorstores import FAISS
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers import pipeline
 
+from model.llm_encoder import LLMBasedEmbeddings
+
 # Pipeline type dictionary
 PIPELINE_TYPE = {"lmsys/vicuna-7b-v1.3": "text-generation"}
 
@@ -26,6 +28,7 @@ class LLMLangChainTutor:
         llm="openai",
         vector_store="faiss",
         openai_key=None,
+        token= None,
         embed_device="cuda",
         llm_device="cuda",
         cache_dir="~/.cache",
@@ -44,6 +47,7 @@ class LLMLangChainTutor:
             cache_dir: Directory to store cache files. Default is '~/.cache'.
         """
         self.openai_key = openai_key
+        self.token = token
         self.llm_name = llm
         self.embed_device = embed_device
         self.llm_device = llm_device
@@ -86,6 +90,11 @@ class LLMLangChainTutor:
                 encode_kwargs={"batch_size": 32},
                 cache_folder=self.cache_dir,
             )
+        elif embedding.startswith("hf"): # If an LLM is chosen from HuggingFace
+            llm_name = embedding.split("_")[-1]
+            self.embedding_model = LLMBasedEmbeddings(llm_name, device = self.llm_device,
+                                                      aggr = self.aggregation,
+                                                      token = self.token)
         else:
             raise NotImplementedError
 
