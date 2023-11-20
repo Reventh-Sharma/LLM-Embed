@@ -6,19 +6,20 @@ from transformers import AutoModel, AutoTokenizer
 
 
 class LLMBasedEmbeddings(Embeddings):
-    def __init__(self, encoding_model, device, aggregation="mean", token=None, hidden_state_id=-1):
+    def __init__(
+        self,
+        model,
+        tokenizer,
+        device,
+        aggregation="mean",
+        hidden_state_id=-1,
+    ):
         """Initialize the encoding model."""
+        self.model = model
+        self.tokenizer = tokenizer
         self.aggregation = aggregation
         self.device = device
         self.hidden_state_id = hidden_state_id
-        self.model = AutoModel.from_pretrained(
-            encoding_model,
-            use_auth_token=token,
-            output_hidden_states=True,
-        ).to(self.device)
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            encoding_model, token=token, device=self.device
-        )
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Compute doc embeddings using a LLM model.
@@ -31,7 +32,7 @@ class LLMBasedEmbeddings(Embeddings):
         """
 
         texts = list(map(lambda x: x.replace("\n", " "), texts))
-        
+
         # Example Architecture:
         # LlamaModel(
         #   (embed_tokens): Embedding(32000, 4096, padding_idx=0)

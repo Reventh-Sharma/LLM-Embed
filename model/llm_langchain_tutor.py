@@ -16,7 +16,10 @@ from transformers import pipeline
 from model.llm_encoder import LLMBasedEmbeddings
 
 # Pipeline type dictionary
-PIPELINE_TYPE = {"lmsys/vicuna-7b-v1.3": "text-generation"}
+PIPELINE_TYPE = {
+    "lmsys/vicuna-7b-v1.3": "text-generation",
+    "stas/tiny-random-llama-2": "text-generation",
+}
 
 
 class LLMLangChainTutor:
@@ -48,6 +51,7 @@ class LLMLangChainTutor:
         self.openai_key = openai_key
         self.token = token
         self.llm_name = llm
+        self.embedding_name = embedding
         self.embed_device = embed_device
         self.llm_device = llm_device
         self.cache_dir = cache_dir
@@ -91,10 +95,21 @@ class LLMLangChainTutor:
             )
         elif embedding.startswith("hf"):  # If an LLM is chosen from HuggingFace
             llm_name = embedding.split("_")[-1]
-            self.embedding_model = LLMBasedEmbeddings(
+            self.base_embedding_model = AutoModelForCausalLM.from_pretrained(
                 llm_name,
-                device=self.llm_device,
-                token=self.token,
+                temperature=0.7,
+                torch_dtype=torch.float16,
+                cache_dir=self.cache_dir,
+                use_auth_token=self.token,
+                output_hidden_states=True,
+            ).to(self.embed_device)
+            self.base_embedding_tokenizer = AutoTokenizer.from_pretrained(
+                llm_name, token=self.token, device=self.embed_device
+            )
+            self.embedding_model = LLMBasedEmbeddings(
+                model=self.base_embedding_model,
+                tokenizer=self.base_embedding_tokenizer,
+                device=self.embed_device,
             )
         else:
             raise NotImplementedError
@@ -180,27 +195,36 @@ class LLMLangChainTutor:
         self._memory_loader()
 
         # setup conversational qa chain
-        if self.llm_name == "openai":
-            self.llm = OpenAI(temperature=0)
+        if self.llm_name == self.embedding_name:
+            llm_name = self.llm_name.split("_")[-1]
+            llm = self.base_embedding_model
+            tokenizer = self.base_embedding_tokenizer
+        elif self.llm_name == "openai":
+            llm = OpenAI(temperature=0)
         elif self.llm_name.startswith("hf"):
             llm_name = self.llm_name.split("_")[-1]
-            self.llm = AutoModelForCausalLM.from_pretrained(
+            llm = AutoModelForCausalLM.from_pretrained(
                 llm_name,
                 temperature=0.7,
                 torch_dtype=torch.float16,
                 cache_dir=self.cache_dir,
+                use_auth_token=self.token,
             ).to(self.llm_device)
-            self.tokenizer = AutoTokenizer.from_pretrained(llm_name)
-            self.gen_pipe = pipeline(
-                PIPELINE_TYPE[llm_name],
-                model=self.llm,
-                tokenizer=self.tokenizer,
-                device=self.llm_device,
-                max_new_tokens=512,
-                return_full_text=False,
+            tokenizer = AutoTokenizer.from_pretrained(
+                llm_name, token=self.token, device=self.llm_device
             )
         else:
             raise NotImplementedError
+
+        # set generation pipeline
+        self.gen_pipe = pipeline(
+            PIPELINE_TYPE[llm_name],
+            model=llm,
+            tokenizer=tokenizer,
+            device=self.llm_device,
+            max_new_tokens=512,
+            return_full_text=False,
+        )
 
     def conversational_qa(self, user_input):
         """
