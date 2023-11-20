@@ -33,7 +33,7 @@ class LLMLangChainTutor:
         token=None,
         embed_device="cuda",
         llm_device="cuda",
-        cache_dir="~/.cache",
+        cache_dir=".cache",
         debug=False,
     ) -> None:
         """

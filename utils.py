@@ -24,7 +24,7 @@ def get_cache_dir(base_dir="/scratch"):
     try:
         cache_dir = get_scratch_dir(base_dir=base_dir)
     except:
-        cache_dir = f"~/.cache/"
+        cache_dir = f".cache/"
 
     return cache_dir
 

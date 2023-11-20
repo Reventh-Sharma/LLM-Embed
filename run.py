@@ -93,34 +93,34 @@ def main(
     # # Analyze embeddings
 
     # Initialize instance of EmbeddingModelMetrics
-    metrics_calculator = EmbeddingModelMetrics()
+    # metrics_calculator = EmbeddingModelMetrics()
 
     # iterate over (question, context_id) pairs
-    for _, row in tqdm(dataset.iterrows(), total=len(dataset)):
-        question = row["question"]
-        doc_id = row["doc_id"]
-
-        # get context from context_id
-        relevant_documents = lmtutor.similarity_search_topk(question)
-        relevant_documents_ids = [
-            int(doc.metadata["source"].split("/")[-1].split(".")[0])
-            for doc in relevant_documents
-        ]
-
-        # Update counters based on the top-k logic
-        metrics_calculator.update(doc_id in relevant_documents_ids)
-
-    # Calculate metrics
-    precision = metrics_calculator.calculate_precision()
-    recall = metrics_calculator.calculate_recall()
-    f1_score = metrics_calculator.calculate_f1_score()
-    accuracy = metrics_calculator.calculate_accuracy()
+    # for _, row in tqdm(dataset.iterrows(), total=len(dataset)):
+    #     question = row["question"]
+    #     doc_id = row["doc_id"]
+    #
+    #     # get context from context_id
+    #     relevant_documents = lmtutor.similarity_search_topk(question)
+    #     relevant_documents_ids = [
+    #         int(doc.metadata["source"].split("/")[-1].split(".")[0])
+    #         for doc in relevant_documents
+    #     ]
+    #
+    #     # Update counters based on the top-k logic
+    #     metrics_calculator.update(doc_id in relevant_documents_ids)
+    #
+    # # Calculate metrics
+    # precision = metrics_calculator.calculate_precision()
+    # recall = metrics_calculator.calculate_recall()
+    # f1_score = metrics_calculator.calculate_f1_score()
+    # accuracy = metrics_calculator.calculate_accuracy()
 
     # print metrics
-    logger.info(f"Top-k accuracy: {accuracy / len(dataset) * 100.0}%")
-    logger.info(f"Precision: {precision}")
-    logger.info(f"Recall: {recall}")
-    logger.info(f"F1 Score: {f1_score}")
+    # logger.info(f"Top-k accuracy: {accuracy / len(dataset) * 100.0}%")
+    # logger.info(f"Precision: {precision}")
+    # logger.info(f"Recall: {recall}")
+    # logger.info(f"F1 Score: {f1_score}")
 
     # Initialize and start conversation
     lmtutor.conversational_qa_init()
