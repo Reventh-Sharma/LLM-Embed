@@ -7,7 +7,7 @@ from utils import get_cache_dir, get_document_folder, get_vector_file
 from metrics import EmbeddingModelMetrics
 from loguru import logger
 from tqdm import tqdm
-
+import torch
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -53,8 +53,8 @@ def main(
     prompt,
     base_data_dir,
     prepare_dataset=False,
-    llm_device="cuda:0",
-    embed_device="cuda:0",
+    llm_device="cuda:0" if torch.cuda.is_available() else "cpu",
+    embed_device="cuda:0" if torch.cuda.is_available() else "cpu",
     debug=False,
 ):
     # Prepare dataset
@@ -82,7 +82,7 @@ def main(
         logger.info("Creating vector store...")
         lmtutor.generate_vector_store(
             doc_folder, vec_file, glob="*.txt", chunk_size=400, chunk_overlap=10
-        )
+        ) #TODO: glob not always text, can be .pdf
     else:
         logger.info("Loading vector store...")
         lmtutor.load_vector_store(vec_file)

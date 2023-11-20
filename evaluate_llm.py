@@ -5,7 +5,7 @@ import pandas as pd
 from tqdm import tqdm
 import os
 import openai
-
+import torch
 
 class LMTutorEvaluator:
     def __init__(self, evaluator='chatgpt', api_key=None) -> None:
@@ -70,7 +70,7 @@ class AnswerGenerator:
 
 class LMTutorAnswerGenerator(AnswerGenerator):
 
-    def __init__(self, embed_device="cpu", llm_device="cuda:0") -> None:
+    def __init__(self, embed_device="cpu", llm_device="cuda:0"  if torch.cuda.is_available() else "cpu") -> None:
         super().__init__()
         self.lmtutor = LLMLangChainTutor(
             embedding="instruct_embedding",
