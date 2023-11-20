@@ -7,6 +7,10 @@ class EmbeddingModelMetrics:
         self.true_labels = true_labels
         self.predicted_labels = predicted_labels
 
+    def update(self, true_labels, predicted_labels):
+        self.true_labels.extend(true_labels)
+        self.predicted_labels.extend(predicted_labels)
+
     def calculate_precision(self):
         return precision_score(self.true_labels, self.predicted_labels, average='weighted')
 
