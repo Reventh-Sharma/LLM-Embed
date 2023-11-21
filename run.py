@@ -1,5 +1,6 @@
 import argparse
 import os
+import shutil
 
 from dataset import prepare_data, get_parsed_data
 from model.llm_langchain_tutor import LLMLangChainTutor
@@ -22,7 +23,7 @@ def parse_args():
         type=str,
         help="Prompt to start conversation",
     )
-    parser.add_argument("--embedding_model", type=str, default="instruct_embedding")
+    parser.add_argument("--embedding_model", type=str, default="")
     parser.add_argument("--llm_model", type=str, default="hf_lmsys/vicuna-7b-v1.3")
 
     # runtime arguments
@@ -84,7 +85,7 @@ def main(
             doc_folder, vec_file, glob="*.txt", chunk_size=400, chunk_overlap=10
         ) #TODO: glob not always text, can be .pdf
     else:
-        logger.info("Loading vector store...")
+        logger.info("Vector Store already exists. Proceeding to load it")
         lmtutor.load_vector_store(vec_file)
 
     # Dataset format: [question, answer, context_id]
@@ -93,8 +94,8 @@ def main(
     # # Analyze embeddings
 
     # Initialize instance of EmbeddingModelMetrics
-    metrics_calculator = EmbeddingModelMetrics()
 
+    true_label, predicted_label = [], []
     # iterate over (question, context_id) pairs
     for _, row in tqdm(dataset.iterrows(), total=len(dataset)):
         question = row["question"]
@@ -109,10 +110,14 @@ def main(
 
         # Update counters based on the top-k logic
         is_correct = doc_id in relevant_documents_ids
+        predicted_label.extend([1 if is_correct else 0])
+        true_label.extend([1])
         ## (true, predicted)
-        metrics_calculator.update([1 if is_correct else 0], [1])
+        # metrics_calculator.update([1 if is_correct else 0], [1])
+
 
     # Calculate metrics
+    metrics_calculator = EmbeddingModelMetrics(true_label, predicted_label)
     precision = metrics_calculator.calculate_precision()
     recall = metrics_calculator.calculate_recall()
     f1_score = metrics_calculator.calculate_f1_score()
@@ -128,6 +133,7 @@ def main(
     lmtutor.conversational_qa_init()
     output = lmtutor.conversational_qa(user_input=prompt)
     logger.info(output)
+    shutil.rmtree(vec_file)
 
 
 if __name__ == "__main__":

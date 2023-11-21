@@ -2,7 +2,7 @@ import os
 
 import torch
 from langchain.document_loaders import DirectoryLoader
-from langchain.embeddings import HuggingFaceInstructEmbeddings
+from langchain.embeddings import HuggingFaceInstructEmbeddings, HuggingFaceEmbeddings
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.llms import OpenAI
 from langchain.memory import ChatMessageHistory
@@ -112,7 +112,14 @@ class LLMLangChainTutor:
                 device=self.embed_device,
             )
         else:
-            raise NotImplementedError
+            self.embedding_model = HuggingFaceEmbeddings(
+                model_kwargs={
+                    "device": self.embed_device,
+                },
+                encode_kwargs={"batch_size": 32},
+                cache_folder=self.cache_dir,
+            )
+
 
     def _vectorstore_loader(self, vector_store):
         """
