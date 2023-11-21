@@ -139,11 +139,17 @@ def main(
     f1_score = metrics_calculator.calculate_f1_score()
     accuracy = metrics_calculator.calculate_accuracy()
 
+    # Calculate recall at every 5 and rank at 50
+    recall_at_k_values = metrics_calculator.calculate_recall_at_k(k_values=[5, 10, 15])
+    rank_at_50_values = metrics_calculator.calculate_rank_at_k(k=50)
+
     # print metrics
     logger.info(f"Top-k accuracy: {accuracy / len(dataset) * 100.0}%")
     logger.info(f"Precision: {precision}")
     logger.info(f"Recall: {recall}")
     logger.info(f"F1 Score: {f1_score}")
+    logger.info(f"Recall@K: {recall_at_k_values}")
+    logger.info(f"Rank@K: {rank_at_50_values}")
 
     # Initialize and start conversation
     lmtutor.conversational_qa_init()
