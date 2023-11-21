@@ -14,6 +14,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers import pipeline
 
 from model.llm_encoder import LLMBasedEmbeddings
+from loguru import logger
 
 # Pipeline type dictionary
 PIPELINE_TYPE = {
@@ -162,12 +163,15 @@ class LLMLangChainTutor:
         """
         Generates vector store from the documents and embedding model
         """
+        logger.info("Creating vector store...")
         splitted_documents = self._load_document(
             doc_path, glob, chunk_size, chunk_overlap
         )
         self.gen_vectorstore = self.vector_store.from_documents(
             splitted_documents, self.embedding_model
         )
+
+        logger.info("Saving vector store...")
         self.gen_vectorstore.save_local(folder_path=vec_path)
 
     def load_vector_store(self, vec_path):
