@@ -104,7 +104,7 @@ def get_parsed_data(dataset_name, base_data_dir, debug=False):
     """
     if dataset_name == "squad":
         dataset = get_qa_file(base_data_dir, dataset_name, debug)
-        df = pd.read_csv(dataset, names=["question", "answer", "doc_id"], sep="\t")
+        df = pd.read_csv(dataset, names=["question", "answer", "doc_id"], sep="\t", on_bad_lines="warn")
         return df
     else:
         raise ValueError("Dataset name not found")
