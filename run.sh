@@ -7,9 +7,9 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
 #SBATCH --gpus=1
-#SBATCH --time=01:00:00
-#SBATCH --output=train-places365.o%j.%N.log
-
+#SBATCH --time=03:00:00
+#SBATCH --array=0-9
+#SBATCH --output=train-lmtutor.o%j.%N.log
 
 declare -xr SINGUALRITY_MODULE='singularitypro/3.5'
 export CACHE_FOLDER='/scratch/'${USER}'/job_'${SLURM_JOBID}
@@ -21,13 +21,25 @@ printenv
 
 # cd /home/ddivyansh/projects/lfcbm
 
-echo $CUDA_VISIBLE_DEVICES
+# echo $CUDA_VISIBLE_DEVICES
 
-python run.py --prepare_dataset --dataset_name "squad" --embedding_model "hf_lmsys/vicuna-7b-v1.5" --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id -1 --aggregation "mean"
-python run.py --prepare_dataset --dataset_name "squad" --embedding_model "hf_lmsys/vicuna-7b-v1.5" --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id -1 --aggregation "max"
-python run.py --prepare_dataset --dataset_name "squad" --embedding_model "hf_lmsys/vicuna-7b-v1.5" --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id -2 --aggregation "mean"
-python run.py --prepare_dataset --dataset_name "squad" --embedding_model "hf_lmsys/vicuna-7b-v1.5" --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id -3 --aggregation "mean"
-python run.py --prepare_dataset --dataset_name "squad" --embedding_model "hf_meta-llama/Llama-2-7b-chat-hf" --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id -1 --aggregation "mean"
-python run.py --prepare_dataset --dataset_name "squad" --embedding_model "hf_meta-llama/Llama-2-7b-chat-hf" --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id -1 --aggregation "max"
-python run.py --prepare_dataset --dataset_name "squad" --embedding_model "hf_meta-llama/Llama-2-7b-chat-hf" --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id -2 --aggregation "mean"
-python run.py --prepare_dataset --dataset_name "squad" --embedding_model "hf_meta-llama/Llama-2-7b-chat-hf" --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id -3 --aggregation "mean"
+# python run.py --prepare_dataset --dataset_name "squad" --embedding_model "hf_lmsys/vicuna-7b-v1.3"  --embed_device $CUDA_VISIBLE_DEVICES --embedding_model_layer -1
+
+
+# Loop over the following models and embedding layers
+MODEL_LIST=("hf_lmsys/vicuna-7b-v1.3" "hf_meta-llama/Llama-2-7b-chat-hf" "instruct_embedding")
+EMBEDING_MODEL_LAYER=("-1" "-2" "-3")
+counter=0
+
+for MODEL in "${MODEL_LIST[@]}"
+do
+    for LAYER in "${EMBEDING_MODEL_LAYER[@]}"
+    do
+        if [ $counter -eq $SLURM_ARRAY_TASK_ID ]
+        then
+            echo "Running model: $MODEL with layer: $LAYER on GPU: $CUDA_VISIBLE_DEVICES"
+            python run.py --prepare_dataset --dataset_name "squad" --embedding_model $MODEL --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id $LAYER --aggregation "mean"
+        fi
+        ((counter++))
+    done
+done

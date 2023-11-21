@@ -71,7 +71,7 @@ def prepare_squad_dataset(base_data_dir, debug=False):
             enumerate(zip(questions, answers, contexts)), total=len(questions)
         ):
             context_id_ = context_id[context]
-            f.write(f"{question}\t{answer['text'][0]}\t{context_id_}\n")
+            f.write(f"{question.strip()}\t{answer['text'][0].strip()}\t{context_id_}\n")
 
     # save unique-context-hash and context-id mapping
     context_id_file = get_context_id_file(base_data_dir, dataset_name, debug)

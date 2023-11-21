@@ -37,7 +37,7 @@ class LLMLangChainTutor:
         cache_dir=".cache",
         debug=False,
         aggregation="mean",
-        hidden_state_id=-1
+        hidden_state_id=-1,
     ) -> None:
         """
         Wrapper class for conversational retrieval chain.

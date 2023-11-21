@@ -28,6 +28,8 @@ def parse_args():
         help="Prompt to start conversation",
     )
     parser.add_argument("--embedding_model", type=str, default="")
+    parser.add_argument("--hidden_state_id", type=int, default=-1)
+    parser.add_argument("--aggregation", type=str, default="mean")
     parser.add_argument("--llm_model", type=str, default="hf_lmsys/vicuna-7b-v1.3")
 
     # runtime arguments
@@ -47,10 +49,6 @@ def parse_args():
     )
     parser.add_argument("--ext_type", type=str, default="*.txt")
 
-    parser.add_argument("--hidden_state_id", type=int, default=-1)
-
-    parser.add_argument("--aggregation", type=str, default='mean')
-
     # parse arguments
     args = parser.parse_args()
     return args
@@ -68,7 +66,7 @@ def main(
     debug=False,
     ext_type="*.txt",
     hidden_state_id=-1,
-    aggregation="mean"
+    aggregation="mean",
 ):
     # Prepare dataset
     if prepare_dataset:
@@ -87,7 +85,7 @@ def main(
         debug=debug,
         token="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",
         hidden_state_id=hidden_state_id,
-        aggregation=aggregation
+        aggregation=aggregation,
     )
 
     # Create vector store if not exists, otherwise load vector store
