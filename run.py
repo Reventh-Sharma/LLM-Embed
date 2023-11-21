@@ -120,20 +120,20 @@ def main(
         ]
 
         td_rank = np.inf
-        if len(np.where(relevant_documents_ids==doc_id)[0])>0:
-            print(np.where(relevant_documents_ids==doc_id))
-            td_rank = np.where(relevant_documents_ids==doc_id)[0][0] + 1
+        if len(np.where(np.array(relevant_documents_ids)==doc_id)[0])>0:
+            td_rank = np.where(np.array(relevant_documents_ids)==doc_id)[0][0] + 1
         true_document_rank.append(td_rank)
         true_label.append(1)
 
     # Calculate metrics
     recall_atk = []
-    for k in range(1, 16, 5):
+    for k in range(1, 17, 5):
         predicted_label = [1 if td_rank<=k else 0 for td_rank in true_document_rank]
         recall_atk.append(np.sum(predicted_label) / np.sum(true_label))
 
-    avg_discounted_rank = np.mean([1/np.log2(td_rank) for td_rank in true_document_rank])
-    avg_recalled_rank = np.mean([td_rank for td_rank in true_document_rank if td_rank<np.inf])
+    print("Compare", len([td_rank for td_rank in true_document_rank if td_rank>0]), len(true_document_rank))
+    avg_discounted_rank = np.mean(np.array([1/(np.log2(td_rank)) for td_rank in true_document_rank if td_rank>0]))
+    avg_recalled_rank = np.mean(np.array([td_rank for td_rank in true_document_rank if td_rank<np.inf]))
 
     metrics_calculator = EmbeddingModelMetrics(true_label, predicted_label)
     precision = metrics_calculator.calculate_precision()
