@@ -41,6 +41,7 @@ def parse_args():
         default=False,
         help="whether to prepare a small subset of the dataset",
     )
+    parser.add_argument("--ext_type", type=str, default="*.txt")
 
     # parse arguments
     args = parser.parse_args()
@@ -56,6 +57,7 @@ def main(
     prepare_dataset=False,
     llm_device="cuda:0" if torch.cuda.is_available() else "cpu",
     embed_device="cuda:0" if torch.cuda.is_available() else "cpu",
+    ext_type="*.txt",
     debug=False,
 ):
     # Prepare dataset
@@ -79,32 +81,14 @@ def main(
     # Create vector store if not exists, otherwise load vector store
     doc_folder = get_document_folder(base_data_dir, dataset_name, debug)
     vec_file = get_vector_file(base_data_dir, dataset_name, debug)
-    supported_extensions = ["*.txt", "*.pdf"]
 
-    # hugging face data
-    hf_datasets = ["quac", "b-mc2/sql-create-context"]
-    for hf_dataset_name in hf_datasets:
-        # reference to visually see the data
-        df_hf = load_hf_dataset_to_pandas(hf_dataset_name)
-        # Create or load vector store for Hugging Face dataset
-        doc_folder_hf = get_document_folder(base_data_dir, hf_dataset_name,
-                                            debug)
-        vec_file_hf = get_vector_file(base_data_dir, hf_dataset_name, debug)
-        if not os.path.exists(vec_file_hf):
-            logger.info(f"Creating vector store for {hf_dataset_name}...")
-            lmtutor.generate_vector_store(
-                doc_folder_hf, vec_file_hf, glob=supported_extensions,
-                chunk_size=400, chunk_overlap=10
-            )
-        else:
-            logger.info(f"Loading vector store for {hf_dataset_name}...")
-            lmtutor.load_vector_store(vec_file_hf)
+    # TODO: Generate Vector store using Quack and SQL Data
 
     if not os.path.exists(vec_file):
         logger.info("Creating vector store...")
         lmtutor.generate_vector_store(
-            doc_folder, vec_file, glob=supported_extensions, chunk_size=400, chunk_overlap=10
-        ) #TODO: glob not always text, can be .pdf
+            doc_folder, vec_file, glob=ext_type, chunk_size=400, chunk_overlap=10
+        )
     else:
         logger.info("Vector Store already exists. Proceeding to load it")
         lmtutor.load_vector_store(vec_file)
