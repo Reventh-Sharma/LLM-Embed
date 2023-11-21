@@ -93,9 +93,8 @@ def main(
         )  # Temp fix for vec_file bug i.e. if a different models or dataset is loaded then use vec_file associated with that data or model
 
     # Create vector store if it does not exist
-    logger.info("Creating vector store...")
     lmtutor.generate_vector_store(
-        doc_folder, vec_file, glob=ext_type, chunk_size=400, chunk_overlap=10
+        doc_folder, vec_file, glob=ext_type, chunk_size=2000, chunk_overlap=10
     )
 
     # Load dataset
@@ -112,7 +111,7 @@ def main(
         doc_id = row["doc_id"]
 
         # get context from context_id
-        relevant_documents = lmtutor.similarity_search_thres(question, k=100)
+        relevant_documents = lmtutor.similarity_search_thres(question, k=15)
         relevant_documents_ids = [
             int(doc.metadata["source"].split("/")[-1].split(".")[0])
             for doc in relevant_documents
