@@ -120,7 +120,6 @@ class LLMLangChainTutor:
                 cache_folder=self.cache_dir,
             )
 
-
     def _vectorstore_loader(self, vector_store):
         """
         Args:
@@ -183,11 +182,10 @@ class LLMLangChainTutor:
         retrieved_docs = self.gen_vectorstore.similarity_search(query, k=k)
         return retrieved_docs
 
-    def similarity_search_thres(self, query, thres=0.8):
+    def similarity_search_thres(self, query, thres=0.8, k=10):
         """Similarity search with which qualify threshold"""
-        retrieval_result = self.gen_vectorstore.similarity_search_with_score(
-            query, k=10
-        )
+        retrieval_result = self.gen_vectorstore.similarity_search_with_score(query, k)
+        retrieval_result.sort(key=lambda x: x[1], reverse=True)
         retrieval_result = [d[0] for d in retrieval_result]
 
         return retrieval_result

@@ -12,6 +12,7 @@ from loguru import logger
 from tqdm import tqdm
 import torch
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
 
@@ -23,6 +24,7 @@ def parse_args():
     parser.add_argument(
         "--prompt",
         type=str,
+        default="what's the course about?",
         help="Prompt to start conversation",
     )
     parser.add_argument("--embedding_model", type=str, default="")
@@ -35,8 +37,8 @@ def parse_args():
         default=get_cache_dir(),
         help="Path to folder containing data",
     )
-    parser.add_argument("--llm_device", type=str, default=0)
-    parser.add_argument("--embed_device", type=str, default=0)
+    parser.add_argument("--llm_device", type=int, default=0)
+    parser.add_argument("--embed_device", type=int, default=0)
     parser.add_argument(
         "--debug",
         action="store_true",
@@ -64,10 +66,10 @@ def main(
 ):
     # Prepare dataset
     if prepare_dataset:
-        print("Preparing dataset...")
+        logger.info("Preparing dataset...")
         prepare_data(dataset_name, base_data_dir, debug)
     else:
-        print("Dataset preparation skipped.")
+        logger.info("Dataset preparation skipped.")
 
     # Create LLMLangChainTutor
     lmtutor = LLMLangChainTutor(
@@ -77,84 +79,78 @@ def main(
         llm_device=llm_device,
         cache_dir=base_data_dir,
         debug=debug,
-        token = "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",
+        token="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",
     )
 
     # Create vector store if not exists, otherwise load vector store
     doc_folder = get_document_folder(base_data_dir, dataset_name, debug)
     vec_file = get_vector_file(base_data_dir, dataset_name, debug)
 
-    # TODO: Generate Vector store using Quack and SQL Data
-
+    # Remove vec_file if it exists
     if os.path.exists(vec_file):
-        shutil.rmtree(vec_file) # Temp fix for vec_file bug i.e. if a different models or dataset is loaded then use vec_file associated with that data or model
+        shutil.rmtree(
+            vec_file
+        )  # Temp fix for vec_file bug i.e. if a different models or dataset is loaded then use vec_file associated with that data or model
 
-    if not os.path.exists(vec_file):
-        logger.info("Creating vector store...")
-        lmtutor.generate_vector_store(
-            doc_folder, vec_file, glob=ext_type, chunk_size=400, chunk_overlap=10
-        )
-    else:
-        logger.info("Vector Store already exists. Proceeding to load it")
-        lmtutor.load_vector_store(vec_file)
+    # Create vector store if it does not exist
+    logger.info("Creating vector store...")
+    lmtutor.generate_vector_store(
+        doc_folder, vec_file, glob=ext_type, chunk_size=400, chunk_overlap=10
+    )
 
+    # Load dataset
     # Dataset format: [question, answer, context_id]
     dataset = get_parsed_data(dataset_name, base_data_dir=base_data_dir, debug=debug)
 
-    # # Analyze embeddings
-
     # Initialize instance of EmbeddingModelMetrics
-
-    true_label, predicted_label = [], []
-    true_document_rank = []
     # iterate over (question, context_id) pairs
+    true_label, pred_labels = [], []
+    logger.info("Calculating metrics...")
     for _, row in tqdm(dataset.iterrows(), total=len(dataset)):
         question = row["question"]
         doc_id = row["doc_id"]
 
         # get context from context_id
-        relevant_documents = lmtutor.similarity_search_topk(question, k=100)
+        relevant_documents = lmtutor.similarity_search_thres(question, k=100)
         relevant_documents_ids = [
             int(doc.metadata["source"].split("/")[-1].split(".")[0])
             for doc in relevant_documents
         ]
 
-        td_rank = np.inf
-        if len(np.where(np.array(relevant_documents_ids)==doc_id)[0])>0:
-            td_rank = np.where(np.array(relevant_documents_ids)==doc_id)[0][0] + 1
-        true_document_rank.append(td_rank)
-        true_label.append(1)
+        true_label.append(doc_id)
+        pred_labels.append(relevant_documents_ids)
 
-    # Calculate metrics
-    recall_atk = []
-    for k in range(1, 17, 5):
-        predicted_label = [1 if td_rank<=k else 0 for td_rank in true_document_rank]
-        recall_atk.append(np.sum(predicted_label) / np.sum(true_label))
-
-    print("Compare", len([td_rank for td_rank in true_document_rank if td_rank>0]), len(true_document_rank))
-    avg_discounted_rank = np.mean(np.array([1/(np.log2(td_rank)) for td_rank in true_document_rank if td_rank>0]))
-    avg_recalled_rank = np.mean(np.array([td_rank for td_rank in true_document_rank if td_rank<np.inf]))
-
-    metrics_calculator = EmbeddingModelMetrics(true_label, predicted_label)
-    precision = metrics_calculator.calculate_precision()
-    recall = metrics_calculator.calculate_recall()
-    f1_score = metrics_calculator.calculate_f1_score()
-    accuracy = metrics_calculator.calculate_accuracy()
-
+    # convert to numpy arrays
+    true_label = np.array(true_label)
+    pred_labels = np.array(pred_labels)
 
     # print metrics
-    logger.info(f"Top-k accuracy: {accuracy / len(dataset) * 100.0}%")
-    logger.info(f"Precision: {precision}")
-    logger.info(f"Recall: {recall}")
-    logger.info(f"F1 Score: {f1_score}")
-    logger.info(f"Recall@K: {recall_atk}")
-    logger.info(f"Average Discounted Rank: {avg_discounted_rank}")
-    logger.info(f"Average Recalled Rank: {avg_recalled_rank}")
+    metrics_calculator = EmbeddingModelMetrics(true_label, pred_labels)
+    logger.info(f"Recall@1: {metrics_calculator.calculate_recall(1)}")
+    logger.info(f"Recall@5: {metrics_calculator.calculate_recall(5)}")
+    logger.info(f"Recall@10: {metrics_calculator.calculate_recall(10)}")
+    logger.info(f"Average document rank: {metrics_calculator.calculate_rank()}")
 
-    # Initialize and start conversation
-    lmtutor.conversational_qa_init()
-    output = lmtutor.conversational_qa(user_input=prompt)
-    logger.info(output)
+    # # td_rank = np.inf
+    #     # if len(np.where(np.array(relevant_documents_ids)==doc_id)[0])>0:
+    #     #     td_rank = np.where(np.array(relevant_documents_ids)==doc_id)[0][0] + 1
+    #     # true_label_rank.append(td_rank)
+    #     # true_label.append(1)
+
+    # # Calculate metrics
+    # recall_atk = []
+    # for k in range(1, 17, 5):
+    #     pred_labels = [1 if td_rank<=k else 0 for td_rank in true_label_rank]
+    #     recall_atk.append(np.sum(pred_labels) / np.sum(true_label))
+
+    # print("Compare", len([td_rank for td_rank in true_label_rank if td_rank>0]), len(true_label_rank))
+    # avg_discounted_rank = np.mean(np.array([1/(np.log2(td_rank)) for td_rank in true_label_rank if td_rank>0]))
+    # avg_recalled_rank = np.mean(np.array([td_rank for td_rank in true_label_rank if td_rank<np.inf]))
+
+    # # Initialize and start conversation
+    # lmtutor.conversational_qa_init()
+    # output = lmtutor.conversational_qa(user_input=prompt)
+    # logger.info(output)
 
 
 if __name__ == "__main__":

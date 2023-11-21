@@ -25,8 +25,15 @@
                 "--prompt",
                 "what's the course about?",
                 "--embedding_model",
-                "hf_lmsys/vicuna-7b-v1.3",
+                // "hf_lmsys/vicuna-7b-v1.3", 
+                "hf_stas/tiny-random-llama-2",
+                // "--llm_model",
+                // "hf_stas/tiny-random-llama-2",
                 "--prepare_dataset",
+                "--llm_device",
+                "2",
+                "--embed_device",
+                "2",
                 "--debug"
             ]
         }
