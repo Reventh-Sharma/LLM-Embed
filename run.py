@@ -130,6 +130,10 @@ def main(
     true_label = np.array(true_label)
     pred_labels = np.array(pred_labels)
 
+    np.save(f"{base_data_dir}/true_label.npy", true_label)
+    np.save(f"{base_data_dir}/pred_labels.npy", pred_labels)
+
+
     # print metrics
     logger.info("Calculating metrics...")
     metrics_calculator = EmbeddingModelMetrics(true_label, pred_labels)
