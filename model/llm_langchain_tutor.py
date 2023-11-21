@@ -35,6 +35,8 @@ class LLMLangChainTutor:
         llm_device="cuda",
         cache_dir=".cache",
         debug=False,
+        aggregation="mean",
+        hidden_state_id=-1
     ) -> None:
         """
         Wrapper class for conversational retrieval chain.
@@ -56,6 +58,8 @@ class LLMLangChainTutor:
         self.llm_device = llm_device
         self.cache_dir = cache_dir
         self.debug = debug
+        self.aggregation = aggregation
+        self.hidden_state_id = hidden_state_id
 
         self._document_loader(doc_loader=doc_loader)
         self._embedding_loader(embedding=embedding)
@@ -110,6 +114,8 @@ class LLMLangChainTutor:
                 model=self.base_embedding_model,
                 tokenizer=self.base_embedding_tokenizer,
                 device=self.embed_device,
+                aggregation=self.aggregation,
+                hidden_state_id=self.hidden_state_id,
             )
         else:
             self.embedding_model = HuggingFaceEmbeddings(

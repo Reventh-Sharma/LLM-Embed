@@ -47,6 +47,10 @@ def parse_args():
     )
     parser.add_argument("--ext_type", type=str, default="*.txt")
 
+    parser.add_argument("--hidden_state_id", type=int, default=-1)
+
+    parser.add_argument("--aggregation", type=str, default='mean')
+
     # parse arguments
     args = parser.parse_args()
     return args
@@ -61,8 +65,10 @@ def main(
     prepare_dataset=False,
     llm_device="cuda:0" if torch.cuda.is_available() else "cpu",
     embed_device="cuda:0" if torch.cuda.is_available() else "cpu",
-    ext_type="*.txt",
     debug=False,
+    ext_type="*.txt",
+    hidden_state_id=-1,
+    aggregation="mean"
 ):
     # Prepare dataset
     if prepare_dataset:
@@ -80,6 +86,8 @@ def main(
         cache_dir=base_data_dir,
         debug=debug,
         token="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",
+        hidden_state_id=hidden_state_id,
+        aggregation=aggregation
     )
 
     # Create vector store if not exists, otherwise load vector store
