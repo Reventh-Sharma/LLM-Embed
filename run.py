@@ -78,10 +78,31 @@ def main(
     # Create vector store if not exists, otherwise load vector store
     doc_folder = get_document_folder(base_data_dir, dataset_name, debug)
     vec_file = get_vector_file(base_data_dir, dataset_name, debug)
+    supported_extensions = ["*.txt", "*.pdf"]
+
+    # hugging face data
+    hf_datasets = ["quac", "b-mc2/sql-create-context"]
+    for hf_dataset_name in hf_datasets:
+        # reference to visually see the data
+        df_hf = load_hf_dataset_to_pandas(hf_dataset_name)
+        # Create or load vector store for Hugging Face dataset
+        doc_folder_hf = get_document_folder(base_data_dir, hf_dataset_name,
+                                            debug)
+        vec_file_hf = get_vector_file(base_data_dir, hf_dataset_name, debug)
+        if not os.path.exists(vec_file_hf):
+            logger.info(f"Creating vector store for {hf_dataset_name}...")
+            lmtutor.generate_vector_store(
+                doc_folder_hf, vec_file_hf, glob=supported_extensions,
+                chunk_size=400, chunk_overlap=10
+            )
+        else:
+            logger.info(f"Loading vector store for {hf_dataset_name}...")
+            lmtutor.load_vector_store(vec_file_hf)
+
     if not os.path.exists(vec_file):
         logger.info("Creating vector store...")
         lmtutor.generate_vector_store(
-            doc_folder, vec_file, glob="*.txt", chunk_size=400, chunk_overlap=10
+            doc_folder, vec_file, glob=supported_extensions, chunk_size=400, chunk_overlap=10
         ) #TODO: glob not always text, can be .pdf
     else:
         logger.info("Loading vector store...")
