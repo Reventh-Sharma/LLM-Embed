@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 from langchain.embeddings.base import Embeddings
 from langchain.pydantic_v1 import BaseModel, Extra, Field
 from transformers import AutoModel, AutoTokenizer
+from loguru import logger
 
 
 class LLMBasedEmbeddings(Embeddings):
@@ -20,6 +21,9 @@ class LLMBasedEmbeddings(Embeddings):
         self.aggregation = aggregation
         self.device = device
         self.hidden_state_id = hidden_state_id
+
+        logger.info(f"Initialized {self.__class__.__name__}. with hidden_state_id={self.hidden_state_id}")
+
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Compute doc embeddings using a LLM model.

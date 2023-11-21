@@ -28,6 +28,7 @@ def parse_args():
         help="Prompt to start conversation",
     )
     parser.add_argument("--embedding_model", type=str, default="")
+    parser.add_argument("--embedding_model_layer", type=int, default=-1)
     parser.add_argument("--llm_model", type=str, default="hf_lmsys/vicuna-7b-v1.3")
 
     # runtime arguments
