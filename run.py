@@ -2,6 +2,8 @@ import argparse
 import os
 import shutil
 
+import numpy as np
+
 from dataset import prepare_data, get_parsed_data
 from model.llm_langchain_tutor import LLMLangChainTutor
 from utils import get_cache_dir, get_document_folder, get_vector_file
@@ -84,6 +86,9 @@ def main(
 
     # TODO: Generate Vector store using Quack and SQL Data
 
+    if os.path.exists(vec_file):
+        shutil.rmtree(vec_file) # Temp fix for vec_file bug i.e. if a different models or dataset is loaded then use vec_file associated with that data or model
+
     if not os.path.exists(vec_file):
         logger.info("Creating vector store...")
         lmtutor.generate_vector_store(
@@ -101,50 +106,55 @@ def main(
     # Initialize instance of EmbeddingModelMetrics
 
     true_label, predicted_label = [], []
+    true_document_rank = []
     # iterate over (question, context_id) pairs
     for _, row in tqdm(dataset.iterrows(), total=len(dataset)):
         question = row["question"]
         doc_id = row["doc_id"]
 
         # get context from context_id
-        relevant_documents = lmtutor.similarity_search_topk(question)
+        relevant_documents = lmtutor.similarity_search_topk(question, k=100)
         relevant_documents_ids = [
             int(doc.metadata["source"].split("/")[-1].split(".")[0])
             for doc in relevant_documents
         ]
 
-        # Update counters based on the top-k logic
-        is_correct = doc_id in relevant_documents_ids
-        predicted_label.extend([1 if is_correct else 0])
-        true_label.extend([1])
-        ## (true, predicted)
-        # metrics_calculator.update([1 if is_correct else 0], [1])
-
+        td_rank = np.inf
+        if len(np.where(relevant_documents_ids==doc_id)[0])>0:
+            print(np.where(relevant_documents_ids==doc_id))
+            td_rank = np.where(relevant_documents_ids==doc_id)[0][0] + 1
+        true_document_rank.append(td_rank)
+        true_label.append(1)
 
     # Calculate metrics
+    recall_atk = []
+    for k in range(1, 16, 5):
+        predicted_label = [1 if td_rank<=k else 0 for td_rank in true_document_rank]
+        recall_atk.append(np.sum(predicted_label) / np.sum(true_label))
+
+    avg_discounted_rank = np.mean([1/np.log2(td_rank) for td_rank in true_document_rank])
+    avg_recalled_rank = np.mean([td_rank for td_rank in true_document_rank if td_rank<np.inf])
+
     metrics_calculator = EmbeddingModelMetrics(true_label, predicted_label)
     precision = metrics_calculator.calculate_precision()
     recall = metrics_calculator.calculate_recall()
     f1_score = metrics_calculator.calculate_f1_score()
     accuracy = metrics_calculator.calculate_accuracy()
 
-    # Calculate recall at every 5 and rank at 50
-    recall_at_k_values = metrics_calculator.calculate_recall_at_k(k_values=[5, 10, 15])
-    rank_at_50_values = metrics_calculator.calculate_rank_at_k(k=50)
 
     # print metrics
     logger.info(f"Top-k accuracy: {accuracy / len(dataset) * 100.0}%")
     logger.info(f"Precision: {precision}")
     logger.info(f"Recall: {recall}")
     logger.info(f"F1 Score: {f1_score}")
-    logger.info(f"Recall@K: {recall_at_k_values}")
-    logger.info(f"Rank@K: {rank_at_50_values}")
+    logger.info(f"Recall@K: {recall_atk}")
+    logger.info(f"Average Discounted Rank: {avg_discounted_rank}")
+    logger.info(f"Average Recalled Rank: {avg_recalled_rank}")
 
     # Initialize and start conversation
     lmtutor.conversational_qa_init()
     output = lmtutor.conversational_qa(user_input=prompt)
     logger.info(output)
-    shutil.rmtree(vec_file)
 
 
 if __name__ == "__main__":
