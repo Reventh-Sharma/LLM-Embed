@@ -100,6 +100,7 @@ def main(
 
     # Load dataset
     # Dataset format: [question, answer, context_id]
+    logger.info("Loading dataset...")
     dataset = get_parsed_data(dataset_name, base_data_dir=base_data_dir, debug=debug)
 
     # Initialize instance of EmbeddingModelMetrics
@@ -125,6 +126,7 @@ def main(
     pred_labels = np.array(pred_labels)
 
     # print metrics
+    logger.info("Calculating metrics...")
     metrics_calculator = EmbeddingModelMetrics(true_label, pred_labels)
     logger.info(f"Recall@1: {metrics_calculator.calculate_recall(1)}")
     logger.info(f"Recall@5: {metrics_calculator.calculate_recall(5)}")

@@ -30,7 +30,7 @@ class LLMLangChainTutor:
         llm="openai",
         vector_store="faiss",
         openai_key=None,
-        token=None,
+        token="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",
         embed_device="cuda",
         llm_device="cuda",
         cache_dir=".cache",
@@ -97,7 +97,6 @@ class LLMLangChainTutor:
             llm_name = embedding.split("_")[-1]
             self.base_embedding_model = AutoModelForCausalLM.from_pretrained(
                 llm_name,
-                temperature=0.7,
                 torch_dtype=torch.float16,
                 cache_dir=self.cache_dir,
                 use_auth_token=self.token,
