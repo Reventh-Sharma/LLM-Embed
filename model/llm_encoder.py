@@ -93,6 +93,7 @@ class LLMBasedEmbeddings(Embeddings):
                 .numpy()
                 for text in texts
             ]
+            logger.info(f"Embedding shape: {embeddings[0].shape}, Total embeddings: {len(embeddings)}")
         else:
             raise NotImplementedError
 
