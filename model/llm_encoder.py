@@ -23,7 +23,7 @@ class LLMBasedEmbeddings(Embeddings):
         self.hidden_state_id = hidden_state_id
 
         logger.info(
-            f"Initialized {self.__class__.__name__}. with hidden_state_id={self.hidden_state_id}"
+            f"Initialized {self.__class__.__name__}. with hidden_state_id: {self.hidden_state_id} and aggregation: {aggregation}"
         )
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:

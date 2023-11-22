@@ -42,7 +42,8 @@ def prepare_squad_dataset(base_data_dir, debug=False):
     # load dataset
     logger.info("Preparing SQuAD dataset...")
     dataset = load_dataset("squad", data_dir=base_data_dir, cache_dir=base_data_dir)
-    train_data = dataset["train"]
+    logger.info("Preparing SQuAD dataset in validation split...")
+    train_data = dataset["validation"]
     if debug:
         logger.info("Preparing SQuAD dataset in debug mode...")
         train_data = train_data.select(range(100))
