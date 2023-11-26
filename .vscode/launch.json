@@ -22,19 +22,19 @@
             "request": "launch",
             "program": "run.py",
             "args": [
-                "--prompt",
-                "what's the course about?",
+                "--prepare_dataset",
+                // "--prompt",
+                // "what's the course about?",
                 "--embedding_model",
                 "hf_meta-llama/Llama-2-7b-chat-hf",
                 // "hf_lmsys/vicuna-7b-v1.3", 
                 // "hf_stas/tiny-random-llama-2",
                 // "--llm_model",
                 // "hf_stas/tiny-random-llama-2",
-                "--prepare_dataset",
-                "--llm_device",
-                "2",
+                // "--llm_device",
+                // "2",
                 "--embed_device",
-                "2",
+                "0",
                 "--debug"
             ]
         }

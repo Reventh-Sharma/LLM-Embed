@@ -66,21 +66,21 @@ class LLMBasedEmbeddings(Embeddings):
         # There are 33 layers in total, including the embedding layer.
         # Size of output['hidden_states']: 33
 
-        if self.aggregation == "max":
-            embeddings = [
-                self.model(
-                    self.tokenizer(text, return_tensors="pt")["input_ids"].to(
-                        self.device
-                    )
-                )["hidden_states"][self.hidden_state_id]
-                .max(axis=1)
-                .values[0]
-                .cpu()
-                .detach()
-                .numpy()
-                for text in texts
-            ]
-        elif self.aggregation == "mean":
+        # if self.aggregation == "max":
+        #     embeddings = [
+        #         self.model(
+        #             self.tokenizer(text, return_tensors="pt")["input_ids"].to(
+        #                 self.device
+        #             )
+        #         )["hidden_states"][self.hidden_state_id]
+        #         .max(axis=1)
+        #         .values[0]
+        #         .cpu()
+        #         .detach()
+        #         .numpy()
+        #         for text in texts
+        #     ]
+        if self.aggregation == "mean":
             embeddings = [
                 self.model(
                     self.tokenizer(text, return_tensors="pt")["input_ids"].to(
@@ -93,7 +93,9 @@ class LLMBasedEmbeddings(Embeddings):
                 .numpy()
                 for text in texts
             ]
-            logger.info(f"Embedding shape: {embeddings[0].shape}, Total embeddings: {len(embeddings)}")
+            logger.info(
+                f"Embedding shape: {embeddings[0].shape}, Total embeddings: {len(embeddings)}"
+            )
         else:
             raise NotImplementedError
 

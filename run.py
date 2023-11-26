@@ -21,16 +21,16 @@ def parse_args():
     parser.add_argument("--dataset_name", type=str, default="squad")
 
     # conversation arguments
-    parser.add_argument(
-        "--prompt",
-        type=str,
-        default="what's the course about?",
-        help="Prompt to start conversation",
-    )
+    # parser.add_argument(
+    #     "--prompt",
+    #     type=str,
+    #     default="what's the course about?",
+    #     help="Prompt to start conversation",
+    # )
     parser.add_argument("--embedding_model", type=str, default="")
     parser.add_argument("--hidden_state_id", type=int, default=-1)
     parser.add_argument("--aggregation", type=str, default="mean")
-    parser.add_argument("--llm_model", type=str, default="hf_lmsys/vicuna-7b-v1.3")
+    # parser.add_argument("--llm_model", type=str, default="hf_lmsys/vicuna-7b-v1.3")
 
     # runtime arguments
     parser.add_argument(
@@ -39,7 +39,7 @@ def parse_args():
         default=get_cache_dir(),
         help="Path to folder containing data",
     )
-    parser.add_argument("--llm_device", type=int, default=0)
+    # parser.add_argument("--llm_device", type=int, default=0)
     parser.add_argument("--embed_device", type=int, default=0)
     parser.add_argument(
         "--debug",
@@ -57,11 +57,11 @@ def parse_args():
 def main(
     dataset_name,
     embedding_model,
-    llm_model,
-    prompt,
+    # llm_model,
+    # prompt,
     base_data_dir,
     prepare_dataset=False,
-    llm_device="cuda:0" if torch.cuda.is_available() else "cpu",
+    # llm_device="cuda:0" if torch.cuda.is_available() else "cpu",
     embed_device="cuda:0" if torch.cuda.is_available() else "cpu",
     debug=False,
     ext_type="*.txt",
@@ -78,9 +78,9 @@ def main(
     # Create LLMLangChainTutor
     lmtutor = LLMLangChainTutor(
         embedding=embedding_model,
-        llm=llm_model,
+        # llm=llm_model,
         embed_device=embed_device,
-        llm_device=llm_device,
+        # llm_device=llm_device,
         cache_dir=base_data_dir,
         debug=debug,
         token="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",
@@ -132,7 +132,6 @@ def main(
 
     np.save(f"{base_data_dir}/true_label.npy", true_label)
     np.save(f"{base_data_dir}/pred_labels.npy", pred_labels)
-
 
     # print metrics
     logger.info("Calculating metrics...")

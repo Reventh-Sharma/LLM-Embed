@@ -1,4 +1,6 @@
 import os
+import shutil
+
 
 def get_scratch_dir(base_dir="/scratch"):
     """
@@ -28,25 +30,34 @@ def get_cache_dir(base_dir="/scratch"):
 
     return cache_dir
 
-def get_document_folder(base_data_dir, dataset_name, debug=False):
+
+def get_document_folder(base_data_dir, dataset_name, debug=False, delete_if_exists=False):
     if debug:
-        file_name = os.path.join(base_data_dir, f"{dataset_name}-debug", "train", "documents")
+        dir_name = os.path.join(
+            base_data_dir, f"{dataset_name}-debug", "train", "documents"
+        )
     else:
-        file_name = os.path.join(base_data_dir, dataset_name, "train", "documents")
-    
+        dir_name = os.path.join(base_data_dir, dataset_name, "train", "documents")
+
     # create directory if it doesn't exist
-    os.makedirs(file_name, exist_ok=True)
-    return file_name
+    if delete_if_exists and os.path.exists(dir_name):
+        shutil.rmtree(dir_name)
+    os.makedirs(dir_name, exist_ok=True)
+    return dir_name
+
 
 def get_qa_file(base_data_dir, dataset_name, debug=False):
     if debug:
-        file_name = os.path.join(base_data_dir, f"{dataset_name}-debug", "train", "train.tsv")
+        file_name = os.path.join(
+            base_data_dir, f"{dataset_name}-debug", "train", "train.tsv"
+        )
     else:
         file_name = os.path.join(base_data_dir, dataset_name, "train", "train.tsv")
 
     # create parent directory if it doesn't exist
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
     return file_name
+
 
 def get_vector_file(base_data_dir, dataset_name, debug=False):
     if debug:
@@ -58,13 +69,15 @@ def get_vector_file(base_data_dir, dataset_name, debug=False):
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
     return file_name
 
+
 def get_context_id_file(base_data_dir, dataset_name, debug=False):
     if debug:
-        file_name = os.path.join(base_data_dir, f"{dataset_name}-debug", "train", "context_id.tsv")
+        file_name = os.path.join(
+            base_data_dir, f"{dataset_name}-debug", "train", "context_id.tsv"
+        )
     else:
         file_name = os.path.join(base_data_dir, dataset_name, "train", "context_id.tsv")
 
     # create parent directory if it doesn't exist
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
     return file_name
-
