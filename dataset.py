@@ -30,7 +30,7 @@ def parse_args():
     return args
 
 
-def prepare_squad_dataset(base_data_dir, debug=False, split="validation"):
+def prepare_squad_dataset(base_data_dir, debug=False, split="train"):
     """
     Prepare dataset: SQuAD
     features: ['id', 'title', 'context', 'question', 'answers']
@@ -70,10 +70,12 @@ def prepare_squad_dataset(base_data_dir, debug=False, split="validation"):
         # Add context to document
         if not context in context_docid_map:
             context_docid_map[context] = docid
-            documents[docid] += f"{context}\n"
+            documents[docid] += f"{context}\n\n"
 
     # Save documents
-    documents_dir = get_document_folder(base_data_dir, dataset_name, debug, delete_if_exists=True)
+    documents_dir = get_document_folder(
+        base_data_dir, dataset_name, debug, delete_if_exists=True
+    )
     logger.info(f"Saving documents to: {documents_dir}")
     for i, document in tqdm(enumerate(documents), total=len(documents)):
         with open(os.path.join(documents_dir, f"{i}.txt"), "w") as f:

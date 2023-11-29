@@ -100,7 +100,7 @@ def main(
 
     # Create vector store if it does not exist
     lmtutor.generate_vector_store(
-        doc_folder, vec_file, glob=ext_type, chunk_size=2000, chunk_overlap=10
+        doc_folder, vec_file, glob=ext_type, chunk_size=2000, chunk_overlap=0
     )
 
     # Load dataset

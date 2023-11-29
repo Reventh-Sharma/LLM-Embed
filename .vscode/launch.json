@@ -26,7 +26,7 @@
                 // "--prompt",
                 // "what's the course about?",
                 "--embedding_model",
-                "hf_meta-llama/Llama-2-7b-chat-hf",
+                "hf_meta-llama/Llama-2-13b-chat-hf",
                 // "hf_lmsys/vicuna-7b-v1.3", 
                 // "hf_stas/tiny-random-llama-2",
                 // "--llm_model",

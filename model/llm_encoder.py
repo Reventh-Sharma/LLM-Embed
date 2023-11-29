@@ -1,3 +1,5 @@
+import torch
+
 from typing import Any, Dict, List, Optional
 
 from langchain.embeddings.base import Embeddings
@@ -35,8 +37,6 @@ class LLMBasedEmbeddings(Embeddings):
         Returns:
             List of embeddings, one for each text.
         """
-
-        texts = list(map(lambda x: x.replace("\n", " "), texts))
 
         # Example Architecture:
         # LlamaModel(
@@ -81,18 +81,21 @@ class LLMBasedEmbeddings(Embeddings):
         #         for text in texts
         #     ]
         if self.aggregation == "mean":
-            embeddings = [
-                self.model(
-                    self.tokenizer(text, return_tensors="pt")["input_ids"].to(
-                        self.device
+            embeddings = []
+            for text in texts:
+                with torch.no_grad():
+                    output = (
+                        self.model(
+                            self.tokenizer(text, return_tensors="pt")["input_ids"].to(
+                                self.device
+                            )
+                        )["hidden_states"][self.hidden_state_id]
+                        .mean(axis=[0, 1])
+                        .cpu()
+                        .detach()
+                        .numpy()
                     )
-                )["hidden_states"][self.hidden_state_id]
-                .mean(axis=[0, 1])
-                .cpu()
-                .detach()
-                .numpy()
-                for text in texts
-            ]
+                    embeddings.append(output)
             logger.info(
                 f"Embedding shape: {embeddings[0].shape}, Total embeddings: {len(embeddings)}"
             )
