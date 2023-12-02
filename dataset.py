@@ -105,6 +105,82 @@ def prepare_squad_dataset(base_data_dir, debug=False, split="train"):
     #         f.write(f"{context_hash}\t{i}\n")
 
 
+def prepare_trivia_dataset(base_data_dir, debug=False, split="rc"):
+    """
+    Prepare trivia_qa dataset
+    Parameters:
+        debug: whether to use a small subset of the dataset for debugging
+    """
+    dataset_name = "trivia_qa"
+
+    # Load your trivia dataset
+    # Adjust the following line based on your actual dataset structure
+    logger.info("Loading trivia dataset...")
+    dataset = load_dataset("trivia_qa", data_dir=base_data_dir,
+                           cache_dir=base_data_dir)
+
+    logger.info(f"Preparing trivia_qa dataset in {split} split...")
+    data_split = dataset[split]
+    if debug:
+        logger.info("Preparing trivia_qa dataset in debug mode...")
+        data_split = data_split.select(range(2000))
+
+    # Save questions, answers, and their corresponding context ids
+    questions = data_split["question"]
+    question_ids = data_split["question_id"]
+    context_ids = []
+
+    # Save docs
+    documents = []
+    docid_map = {}  # maps document titles to doc ids
+    context_docid_map = {}  # maps contexts to doc ids
+
+    for i, (question, question_id, entity_pages) in tqdm(
+            enumerate(zip(questions, question_ids, data_split["entity_pages"])),
+            total=len(questions)
+    ):
+        # Extract the needed info from entity_pages
+        title = entity_pages["title"]
+        wiki_context = entity_pages["wiki_context"]
+
+        # Check if document already exists
+        if title in docid_map:
+            docid = docid_map[title]
+        else:
+            docid = len(documents)
+            docid_map[title] = docid
+            documents.append("")
+
+        # Add context to document
+        if wiki_context not in context_docid_map:
+            context_docid_map[wiki_context] = docid
+            documents[docid] += f"{wiki_context}\n\n"
+
+        context_ids.append(context_docid_map[wiki_context])
+
+    # Save documents
+    documents_dir = get_document_folder(
+        base_data_dir, dataset_name, debug, delete_if_exists=True
+    )
+    logger.info(f"Saving documents to: {documents_dir}")
+    for i, document in tqdm(enumerate(documents), total=len(documents)):
+        with open(os.path.join(documents_dir, f"{i}.txt"), "w") as f:
+            f.write(document)
+    logger.info(
+        f"Total Documents: {len(documents)}, Total Contexts: {len(context_docid_map)}"
+    )
+
+    # Save QA pairs
+    qa_file = get_qa_file(base_data_dir, dataset_name, debug)
+    logger.info(f"Saving QA pairs to: {qa_file}")
+    with open(qa_file, "w") as f:
+        for i, (question, question_id, context_id) in tqdm(
+                enumerate(zip(questions, question_ids, context_ids)),
+                total=len(questions)
+        ):
+            f.write(f"{question.strip()}\t{question_id}\t{context_id}\n")
+
+
 def prepare_data(dataset_name, base_data_dir, debug=False):
     """
     Parameters:
@@ -114,7 +190,9 @@ def prepare_data(dataset_name, base_data_dir, debug=False):
     if dataset_name == "squad":
         prepare_squad_dataset(base_data_dir, debug)
     elif dataset_name == "quac" or dataset_name == "trivia_qa":
-        load_hf_dataset_to_pandas(dataset_name)
+        # hf_data = load_hf_dataset_to_pandas(dataset_name)
+        # not needed anymore with the manipulation in the function below
+        prepare_trivia_dataset(base_data_dir, debug)
     else:
         raise ValueError("Dataset name not found")
 
