@@ -43,7 +43,8 @@ def load_hf_dataset_to_pandas(dataset_name, split='train', config_name=None):
 quac_df = load_hf_dataset_to_pandas("quac")
 quac_df
 
-## b-mc2/sql-create-context
+## trivia_qa
 
-sql_df = load_hf_dataset_to_pandas('b-mc2/sql-create-context')
-sql_df
+trivia_df = load_hf_dataset_to_pandas("trivia", "rc")
+trivia_df
+
