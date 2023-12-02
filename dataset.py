@@ -53,6 +53,25 @@ def prepare_squad_dataset(base_data_dir, debug=False, split="train"):
     docid_map = {}  # maps doscument titles to doc ids
     context_docid_map = {}  # maps contexts to doc ids
 
+    # Prompt the user to choose a query instruction
+    print("Choose a query instruction:")
+    print(
+        "1. 'Add summariser this document in 500 words' to prefix of every sentence")
+    print("2. 'Step by step response then plain bland response'")
+
+    user_choice = input("Enter your choice (1 or 2): ")
+
+    if user_choice == "1":
+        query_instruction = "Add summariser this document in 500 words to the prefix of every sentence:"
+    elif user_choice == "2":
+        query_instruction = "Step by step response then plain bland response:"
+    else:
+        print("Invalid choice. Using a default query instruction.")
+        query_instruction = "Provide information on the following topic:"
+
+    add_query_instruction(documents, query_instruction,
+                          data_split["context"])
+
     # Get unique documents
     titles = data_split["title"]
     contexts = data_split["context"]
@@ -134,6 +153,25 @@ def prepare_trivia_dataset(base_data_dir, debug=False, split="rc"):
     documents = []
     docid_map = {}  # maps document titles to doc ids
     context_docid_map = {}  # maps contexts to doc ids
+
+    # Prompt the user to choose a query instruction
+    print("Choose a query instruction:")
+    print(
+        "1. 'Add summariser this document in 500 words' to prefix of every sentence")
+    print("2. 'Step by step response then plain bland response'")
+
+    user_choice = input("Enter your choice (1 or 2): ")
+
+    if user_choice == "1":
+        query_instruction = "Add summariser this document in 500 words to the prefix of every sentence:"
+    elif user_choice == "2":
+        query_instruction = "Step by step response then plain bland response:"
+    else:
+        print("Invalid choice. Using a default query instruction.")
+        query_instruction = "Provide information on the following topic:"
+
+    add_query_instruction(documents, query_instruction,
+                          entity_pages["wiki_context"])
 
     for i, (question, question_id, entity_pages) in tqdm(
             enumerate(zip(questions, question_ids, data_split["entity_pages"])),
