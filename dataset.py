@@ -124,6 +124,105 @@ def prepare_squad_dataset(base_data_dir, debug=False, split="train"):
     #         f.write(f"{context_hash}\t{i}\n")
 
 
+def prepare_quac_dataset(base_data_dir, debug=False, split="train"):
+    """
+    Prepare QUAC dataset
+    Parameters:
+        debug: whether to use a small subset of the dataset for debugging
+    """
+    dataset_name = "quac"
+
+    # Load your QUAC dataset
+    # Adjust the following line based on your actual dataset structure
+    logger.info("Loading QUAC dataset...")
+    dataset = load_dataset("quac", split=split, cache_dir=base_data_dir)
+
+    logger.info(f"Preparing QUAC dataset in {split} split...")
+    data_split = dataset[split]
+    if debug:
+        logger.info("Preparing QUAC dataset in debug mode...")
+        data_split = data_split.select(range(2000))
+
+    # Extract necessary information for query engineering
+    dialogue_ids = data_split["dialogue_id"]
+    wikipedia_page_titles = data_split["wikipedia_page_title"]
+    contexts = data_split["context"]
+    questions = data_split["questions"]
+    answers = data_split["texts"]
+
+    # Save docs with query instruction
+    documents = []
+    docid_map = {}  # maps document titles to doc ids
+    context_docid_map = {}  # maps contexts to doc ids
+    context_ids = []
+
+    # Prompt the user to choose a query instruction
+    print("Choose a query instruction:")
+    print(
+        "1. 'Add summariser this document in 500 words' to prefix of every sentence")
+    print("2. 'Step by step response then plain bland response'")
+
+    user_choice = input("Enter your choice (1 or 2): ")
+
+    if user_choice == "1":
+        query_instruction = "Add summariser this document in 500 words to the prefix of every sentence:"
+    elif user_choice == "2":
+        query_instruction = "Step by step response then plain bland response:"
+    else:
+        print("Invalid choice. Using a default query instruction.")
+        query_instruction = "Provide information on the following topic:"
+
+    add_query_instruction(documents, query_instruction, contexts)
+
+    for i, (
+    dialogue_id, wikipedia_page_title, context, question, answer) in tqdm(
+            enumerate(
+                zip(dialogue_ids, wikipedia_page_titles, contexts, questions,
+                    answers)),
+            total=len(questions)
+    ):
+        # Extract the needed info
+        title = wikipedia_page_title
+        wiki_context = context
+
+        # Check if document already exists
+        if title in docid_map:
+            docid = docid_map[title]
+        else:
+            docid = len(documents)
+            docid_map[title] = docid
+            documents.append("")
+
+        # Add context to document
+        if wiki_context not in context_docid_map:
+            context_docid_map[wiki_context] = docid
+            documents[docid] += f"{wiki_context}\n\n"
+
+        context_ids.append(context_docid_map[wiki_context])
+
+    # Save documents
+    documents_dir = get_document_folder(
+        base_data_dir, dataset_name, debug, delete_if_exists=True
+    )
+    logger.info(f"Saving documents to: {documents_dir}")
+    for i, document in tqdm(enumerate(documents), total=len(documents)):
+        with open(os.path.join(documents_dir, f"{i}.txt"), "w") as f:
+            f.write(document)
+    logger.info(
+        f"Total Documents: {len(documents)}, Total Contexts: {len(context_docid_map)}"
+    )
+
+    # Save QA pairs
+    qa_file = get_qa_file(base_data_dir, dataset_name, debug)
+    logger.info(f"Saving QA pairs to: {qa_file}")
+    with open(qa_file, "w") as f:
+        for i, (dialogue_id, question, answer, context) in tqdm(
+                enumerate(zip(dialogue_ids, questions, texts, contexts)),
+                total=len(questions)
+        ):
+            f.write(f"{dialogue_id}\t{question}\t{answer}\t{context}\n")
+
+
 def prepare_trivia_dataset(base_data_dir, debug=False, split="rc"):
     """
     Prepare trivia_qa dataset
