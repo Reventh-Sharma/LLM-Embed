@@ -113,7 +113,7 @@ def prepare_data(dataset_name, base_data_dir, debug=False):
     """
     if dataset_name == "squad":
         prepare_squad_dataset(base_data_dir, debug)
-    elif dataset_name == "quac" or dataset_name == "b-mc2/sql-create-context":
+    elif dataset_name == "quac" or dataset_name == "trivia_qa":
         load_hf_dataset_to_pandas(dataset_name)
     else:
         raise ValueError("Dataset name not found")
