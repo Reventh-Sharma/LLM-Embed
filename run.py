@@ -30,6 +30,12 @@ def parse_args():
     parser.add_argument("--embedding_model", type=str, default="")
     parser.add_argument("--hidden_state_id", type=int, default=-1)
     parser.add_argument("--aggregation", type=str, default="mean")
+    parser.add_argument(
+        "--query_choice",
+        type=str,
+        default=None,
+        help="Choice for query prefix to append to each document. Use (None): No prefix is added, (1) `Summarize the following in 10 word` prefix is added",
+    )
     # parser.add_argument("--llm_model", type=str, default="hf_lmsys/vicuna-7b-v1.3")
 
     # runtime arguments
@@ -67,6 +73,7 @@ def main(
     ext_type="*.txt",
     hidden_state_id=-1,
     aggregation="mean",
+    query_choice=None,
 ):
     # Prepare dataset
     if prepare_dataset:
@@ -100,7 +107,12 @@ def main(
 
     # Create vector store if it does not exist
     lmtutor.generate_vector_store(
-        doc_folder, vec_file, glob=ext_type, chunk_size=2000, chunk_overlap=0
+        doc_folder,
+        vec_file,
+        glob=ext_type,
+        chunk_size=2000,
+        chunk_overlap=0,
+        query_choice=query_choice,
     )
 
     # Load dataset
@@ -140,7 +152,6 @@ def main(
     logger.info(f"Recall@5: {metrics_calculator.calculate_recall(5)}")
     logger.info(f"Recall@10: {metrics_calculator.calculate_recall(10)}")
     logger.info(f"Average document rank: {metrics_calculator.calculate_rank()}")
-    np.transpose()
 
     # # td_rank = np.inf
     #     # if len(np.where(np.array(relevant_documents_ids)==doc_id)[0])>0:
@@ -168,4 +179,3 @@ if __name__ == "__main__":
     args = parse_args()
     logger.info(args)
     main(**args.__dict__)
-
