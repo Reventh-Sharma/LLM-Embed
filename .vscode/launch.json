@@ -33,6 +33,10 @@
                 // "hf_stas/tiny-random-llama-2",
                 // "--llm_device",
                 // "2",
+                // "--aggregation",
+                // "token_embeddings",
+                "--query_choice",
+                "1",
                 "--embed_device",
                 "0",
                 "--debug"

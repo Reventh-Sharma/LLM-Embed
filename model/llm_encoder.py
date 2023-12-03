@@ -9,6 +9,7 @@ from loguru import logger
 
 from tqdm import tqdm
 
+
 class LLMBasedEmbeddings(Embeddings):
     def __init__(
         self,
@@ -87,37 +88,39 @@ class LLMBasedEmbeddings(Embeddings):
         embeddings = []
         if self.aggregation == "mean":
             for text in tqdm(texts):
-                output = (
-                    self.model(
-                        self.tokenizer(text, return_tensors="pt")["input_ids"].to(
-                            self.device
-                        )
-                    )["hidden_states"][self.hidden_state_id]
-                    .mean(axis=[0, 1])
-                    .cpu()
-                    .detach()
-                    .numpy()
-                )
+                output = self.model(
+                    self.tokenizer(text, return_tensors="pt")["input_ids"].to(
+                        self.device
+                    )
+                )["hidden_states"][self.hidden_state_id]
+
+                # Don't include last token since it represent
+                # next token prediction
+                output = output[0, :-1, :]
+                output = output.mean(axis=0).cpu().detach().numpy()
                 embeddings.append(output)
         elif self.aggregation == "token_embeddings":
             for text in tqdm(texts):
-                output = (
-                    self.model.model.embed_tokens(
-                        self.tokenizer(texts, return_tensors="pt")["input_ids"].to(
-                            self.device
-                        )
+                output = self.model.model.embed_tokens(
+                    self.tokenizer(text, return_tensors="pt")["input_ids"].to(
+                        self.device
                     )
-                    .mean(axis=[0, 1])
-                    .cpu()
-                    .detach()
-                    .numpy()
                 )
+                output = output[0, :, :]
+                output = output.mean(axis=0).cpu().detach().numpy()
                 embeddings.append(output)
-        elif self.aggregation == "next_token_prediction":
-            output = self.model.generate(
-                self.tokenizer(texts, return_tensors="pt")["input_ids"].to(self.device),
-                max_tokens=max_tokens,
-            )
+        elif self.aggregation == "last_token":
+            for text in tqdm(texts):
+                text = f"This sentence: {text} means in one word:"
+                output = self.model(
+                    self.tokenizer(text, return_tensors="pt")["input_ids"].to(
+                        self.device
+                    )
+                )["hidden_states"][-1]
+
+                # take the last token
+                output = output[0, -1, :].cpu().detach().numpy()
+                embeddings.append(output)
         else:
             raise NotImplementedError
 
