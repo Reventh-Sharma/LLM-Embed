@@ -140,6 +140,7 @@ def main(
     logger.info(f"Recall@5: {metrics_calculator.calculate_recall(5)}")
     logger.info(f"Recall@10: {metrics_calculator.calculate_recall(10)}")
     logger.info(f"Average document rank: {metrics_calculator.calculate_rank()}")
+    np.transpose()
 
     # # td_rank = np.inf
     #     # if len(np.where(np.array(relevant_documents_ids)==doc_id)[0])>0:
@@ -167,3 +168,4 @@ if __name__ == "__main__":
     args = parse_args()
     logger.info(args)
     main(**args.__dict__)
+

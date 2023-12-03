@@ -6,7 +6,7 @@ import pandas as pd
 from datasets import load_dataset
 from tqdm import tqdm
 
-from hf_data_prep import load_hf_dataset_to_pandas
+from query_engineering import add_query_instruction
 from utils import get_cache_dir, get_context_id_file, get_document_folder, get_qa_file
 from loguru import logger
 
@@ -30,7 +30,7 @@ def parse_args():
     return args
 
 
-def prepare_squad_dataset(base_data_dir, debug=False, split="train"):
+def prepare_squad_dataset(base_data_dir, debug=False, split="train", use_random_contexts=False, rand_context_len=10000):
     """
     Prepare dataset: SQuAD
     features: ['id', 'title', 'context', 'question', 'answers']
@@ -103,6 +103,15 @@ def prepare_squad_dataset(base_data_dir, debug=False, split="train"):
         f"Total Documents: {len(documents)}, Total Contexts: {len(context_docid_map)}"
     )
 
+    if use_random_contexts:
+        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug,
+                                                           split=split)[:rand_context_len]
+        total_rands = rand_context_len
+        startfrom = len(contexts)
+        for i, rand_context in tqdm(enumerate(rand_contexts), total=total_rands):
+            with open(os.path.join(documents_dir, f"{startfrom + i}.txt"), "w") as f:
+                f.write(rand_context)
+
     # Save questions, answers, and their corresponding context ids
     questions = data_split["question"]
     answers = data_split["answers"]
@@ -115,6 +124,7 @@ def prepare_squad_dataset(base_data_dir, debug=False, split="train"):
             context_id_ = context_docid_map[context]
             f.write(f"{question.strip()}\t{answer['text'][0].strip()}\t{context_id_}\n")
 
+
     # # save unique-context-hash and context-id mapping
     # context_id_file = get_context_id_file(base_data_dir, dataset_name, debug)
     # logger.info(f"Saving context_id to: {context_id_file}")
@@ -124,7 +134,7 @@ def prepare_squad_dataset(base_data_dir, debug=False, split="train"):
     #         f.write(f"{context_hash}\t{i}\n")
 
 
-def prepare_quac_dataset(base_data_dir, debug=False, split="train"):
+def prepare_quac_dataset(base_data_dir, debug=False, split="train", use_random_contexts=False, rand_context_len=10000):
     """
     Prepare QUAC dataset
     Parameters:
@@ -211,6 +221,17 @@ def prepare_quac_dataset(base_data_dir, debug=False, split="train"):
     logger.info(
         f"Total Documents: {len(documents)}, Total Contexts: {len(context_docid_map)}"
     )
+
+    if use_random_contexts:
+        logger.info("Adding random contexts")
+        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug,
+                                                           split=split)[:rand_context_len]
+        total_rands = rand_context_len
+        startfrom = len(contexts)
+        for i, rand_context in tqdm(enumerate(rand_contexts), total=total_rands):
+            with open(os.path.join(documents_dir, f"{startfrom + i}.txt"), "w") as f:
+                f.write(rand_context)
+        logger.info("Random contexts added")
 
     # Save QA pairs
     qa_file = get_qa_file(base_data_dir, dataset_name, debug)
@@ -318,20 +339,54 @@ def prepare_trivia_dataset(base_data_dir, debug=False, split="rc"):
             f.write(f"{question.strip()}\t{question_id}\t{context_id}\n")
 
 
-def prepare_data(dataset_name, base_data_dir, debug=False):
+def prepare_data(dataset_name, base_data_dir, debug=False, use_random_contexts=False):
     """
     Parameters:
         dataset_name: name of the dataset
         debug: whether to use a small subset of the dataset for debugging
     """
     if dataset_name == "squad":
-        prepare_squad_dataset(base_data_dir, debug)
-    elif dataset_name == "quac" or dataset_name == "trivia_qa":
-        # hf_data = load_hf_dataset_to_pandas(dataset_name)
-        # not needed anymore with the manipulation in the function below
-        prepare_trivia_dataset(base_data_dir, debug)
+        prepare_squad_dataset(base_data_dir, debug, use_random_contexts=use_random_contexts)
+    elif dataset_name == "quac":
+        prepare_quac_dataset(base_data_dir, debug, use_random_contexts=use_random_contexts)
+    elif dataset_name == "trivia_qa":
+        prepare_trivia_dataset(base_data_dir, debug, use_random_contexts=use_random_contexts)
     else:
         raise ValueError("Dataset name not found")
+
+
+def generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, dataset_name='pubmed_qa', name='pqa_artificial', debug=False, split="train"):
+    """
+    Prepare dataset: Unrelated Contexts (Default pubmed_qa), Since our QA documents don't have medical related questions
+    Parameters:
+        base_data_dir: path to folder where dataset will be saved
+        from_existing_unrelated: whether to use existing unrelated contexts or generate new ones using LLM's
+        dataset_name: name of the dataset
+        debug: whether to use a small subset of the dataset for debugging
+        split: train or test
+    """
+
+    if from_existing_unrelated:
+        try :
+            rand_data = load_dataset(dataset_name, name=name, cache_dir=base_data_dir)
+            logger.info(f"Successfully loaded existing unrelated contexts using {dataset_name}")
+
+        except:
+            raise ValueError(f"Existing unrelated contexts not found from {dataset_name}, use random context generation using LLMS")
+
+        # Code specific to only pubmed_qa dataset
+        rand_data = rand_data[split]
+        rand_contexts = rand_data['context']
+        for i, context in tqdm(enumerate(rand_contexts), total=len(rand_contexts)):
+            rand_contexts[i] = ' '.join(context['contexts']).replace('\n', ' ').strip()
+        if debug:
+            rand_contexts = rand_contexts[:2000]
+            logger.info("Debug mode is active, using only 2000 unrelated contexts")
+        return rand_contexts
+
+    else:
+        # Random context generation using LLMS can be added later
+        return None
 
 
 def get_parsed_data(dataset_name, base_data_dir, debug=False):
@@ -340,7 +395,7 @@ def get_parsed_data(dataset_name, base_data_dir, debug=False):
         dataset_name: name of the dataset
         debug: whether to use a small subset of the dataset for debugging
     """
-    if dataset_name == "squad":
+    if dataset_name == "squad" or dataset_name == "quac" or dataset_name == "trivia_qa":
         dataset = get_qa_file(base_data_dir, dataset_name, debug)
         df = pd.read_csv(
             dataset,

@@ -113,4 +113,5 @@ class LLMBasedEmbeddings(Embeddings):
         Returns:
             Embeddings for the text.
         """
+
         return self.embed_documents([text])[0]
