@@ -41,9 +41,8 @@ def prepare_squad_dataset(base_data_dir, debug=False, split="train", use_random_
 
     # load dataset
     logger.info("Preparing SQuAD dataset...")
-    dataset = load_dataset("squad", data_dir=base_data_dir, cache_dir=base_data_dir)
-    logger.info(f"Preparing SQuAD dataset in {split} split...")
-    data_split = dataset[split]
+    data_split = load_dataset("squad", data_dir=base_data_dir, cache_dir=base_data_dir, split = split)
+    logger.info(f"Prepared SQuAD dataset in {split} split...")
     if debug:
         logger.info("Preparing SQuAD dataset in debug mode...")
         data_split = data_split.select(range(2000))
@@ -104,8 +103,7 @@ def prepare_squad_dataset(base_data_dir, debug=False, split="train", use_random_
     )
 
     if use_random_contexts:
-        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug,
-                                                           split=split)[:rand_context_len]
+        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug, split=split)[:rand_context_len]
         total_rands = rand_context_len
         startfrom = len(contexts)
         for i, rand_context in tqdm(enumerate(rand_contexts), total=total_rands):
@@ -224,8 +222,7 @@ def prepare_quac_dataset(base_data_dir, debug=False, split="train", use_random_c
 
     if use_random_contexts:
         logger.info("Adding random contexts")
-        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug,
-                                                           split=split)[:rand_context_len]
+        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug, split=split)[:rand_context_len]
         total_rands = rand_context_len
         startfrom = len(contexts)
         for i, rand_context in tqdm(enumerate(rand_contexts), total=total_rands):
@@ -244,7 +241,7 @@ def prepare_quac_dataset(base_data_dir, debug=False, split="train", use_random_c
             f.write(f"{dialogue_id}\t{question}\t{answer}\t{context}\n")
 
 
-def prepare_trivia_dataset(base_data_dir, debug=False, split="rc"):
+def prepare_trivia_dataset(base_data_dir, debug=False, split="rc", use_random_contexts=False):
     """
     Prepare trivia_qa dataset
     Parameters:
