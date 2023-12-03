@@ -38,13 +38,13 @@ def load_hf_dataset_to_pandas(dataset_name, split='train', config_name=None):
 
     return df
 
-## Quac Data
+# ## Quac Data
 
-quac_df = load_hf_dataset_to_pandas("quac")
-quac_df
+# quac_df = load_hf_dataset_to_pandas("quac")
+# quac_df
 
-## trivia_qa
+# ## trivia_qa
 
-trivia_df = load_hf_dataset_to_pandas("trivia", "rc")
-trivia_df
+# trivia_df = load_hf_dataset_to_pandas("trivia", "rc")
+# trivia_df
 

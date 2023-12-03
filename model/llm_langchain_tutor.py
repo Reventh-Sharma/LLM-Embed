@@ -16,6 +16,8 @@ from transformers import pipeline
 from model.llm_encoder import LLMBasedEmbeddings
 from loguru import logger
 
+from query_engineering import add_query_instruction
+
 # Pipeline type dictionary
 PIPELINE_TYPE = {
     "lmsys/vicuna-7b-v1.3": "text-generation",
@@ -104,7 +106,7 @@ class LLMLangChainTutor:
                 llm_name,
                 torch_dtype=torch.float16,
                 cache_dir=self.cache_dir,
-                use_auth_token=self.token,
+                token=self.token,
                 output_hidden_states=True,
             ).to(self.embed_device)
             self.base_embedding_tokenizer = AutoTokenizer.from_pretrained(
@@ -164,19 +166,44 @@ class LLMLangChainTutor:
         return text_splitter.split_documents(docs)
 
     def generate_vector_store(
-        self, doc_path, vec_path, glob="*.pdf", chunk_size=400, chunk_overlap=0
+        self,
+        doc_path,
+        vec_path,
+        glob="*.pdf",
+        chunk_size=400,
+        chunk_overlap=0,
+        query_choice=None,
     ):
         """
         Generates vector store from the documents and embedding model
         """
         logger.info("Creating vector store...")
+
+        # split documents
         splitted_documents = self._load_document(
             doc_path, glob, chunk_size, chunk_overlap
         )
+
+        # add query prefix
+        max_tokens = None
+        if query_choice == "1":
+            query_prefix = "Summarize the following in 10 word: "
+            max_tokens = 10
+        elif query_choice == "2":
+            # TODO: Not sure why we need this prompt?
+            query_prefix = "Step by step response then plain bland response:"
+        else:
+            query_prefix = ""
+        logger.info(f"Using query prefix: {query_prefix}")
+
+        # generate vector store
+        if query_prefix:
+            splitted_documents = add_query_instruction(splitted_documents, query_prefix)
         self.gen_vectorstore = self.vector_store.from_documents(
-            splitted_documents, self.embedding_model
+            splitted_documents, self.embedding_model, max_tokens=max_tokens
         )
 
+        # save vectorstore
         logger.info("Saving vector store...")
         self.gen_vectorstore.save_local(folder_path=vec_path)
 
@@ -222,7 +249,7 @@ class LLMLangChainTutor:
                 temperature=0.7,
                 torch_dtype=torch.float16,
                 cache_dir=self.cache_dir,
-                use_auth_token=self.token,
+                token=self.token,
             ).to(self.llm_device)
             tokenizer = AutoTokenizer.from_pretrained(
                 llm_name, token=self.token, device=self.llm_device

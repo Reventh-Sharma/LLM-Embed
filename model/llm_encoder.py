@@ -7,6 +7,7 @@ from langchain.pydantic_v1 import BaseModel, Extra, Field
 from transformers import AutoModel, AutoTokenizer
 from loguru import logger
 
+from tqdm import tqdm
 
 class LLMBasedEmbeddings(Embeddings):
     def __init__(
@@ -28,7 +29,10 @@ class LLMBasedEmbeddings(Embeddings):
             f"Initialized {self.__class__.__name__}. with hidden_state_id: {self.hidden_state_id} and aggregation: {aggregation}"
         )
 
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+    @torch.no_grad()
+    def embed_documents(
+        self, texts: List[str], max_tokens: int = None
+    ) -> List[List[float]]:
         """Compute doc embeddings using a LLM model.
 
         Args:
@@ -80,28 +84,46 @@ class LLMBasedEmbeddings(Embeddings):
         #         .numpy()
         #         for text in texts
         #     ]
+        embeddings = []
         if self.aggregation == "mean":
-            embeddings = []
-            for text in texts:
-                with torch.no_grad():
-                    output = (
-                        self.model(
-                            self.tokenizer(text, return_tensors="pt")["input_ids"].to(
-                                self.device
-                            )
-                        )["hidden_states"][self.hidden_state_id]
-                        .mean(axis=[0, 1])
-                        .cpu()
-                        .detach()
-                        .numpy()
+            for text in tqdm(texts):
+                output = (
+                    self.model(
+                        self.tokenizer(text, return_tensors="pt")["input_ids"].to(
+                            self.device
+                        )
+                    )["hidden_states"][self.hidden_state_id]
+                    .mean(axis=[0, 1])
+                    .cpu()
+                    .detach()
+                    .numpy()
+                )
+                embeddings.append(output)
+        elif self.aggregation == "token_embeddings":
+            for text in tqdm(texts):
+                output = (
+                    self.model.model.embed_tokens(
+                        self.tokenizer(texts, return_tensors="pt")["input_ids"].to(
+                            self.device
+                        )
                     )
-                    embeddings.append(output)
-            logger.info(
-                f"Embedding shape: {embeddings[0].shape}, Total embeddings: {len(embeddings)}"
+                    .mean(axis=[0, 1])
+                    .cpu()
+                    .detach()
+                    .numpy()
+                )
+                embeddings.append(output)
+        elif self.aggregation == "next_token_prediction":
+            output = self.model.generate(
+                self.tokenizer(texts, return_tensors="pt")["input_ids"].to(self.device),
+                max_tokens=max_tokens,
             )
         else:
             raise NotImplementedError
 
+        logger.info(
+            f"Embedding shape: {embeddings[0].shape}, Total embeddings: {len(embeddings)}"
+        )
         return embeddings
 
     def embed_query(self, text: str) -> List[float]:
