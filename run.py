@@ -25,7 +25,7 @@ def parse_args():
     parser.add_argument("--prepare_dataset", action="store_true")
     parser.add_argument("--dataset_name", type=str, default="squad")
     parser.add_argument(
-        "--dataset_split", type=str, default="validation", help="train or validation"
+        "--dataset_split", type=str, default="train", help="train or validation"
     )
     parser.add_argument(
         "--doc_prob",
@@ -50,6 +50,21 @@ def parse_args():
         default=None,
         help="Choice for query prefix to append to each document. Use (None): No prefix is added, (1) `Summarize the following in 10 word` prefix is added",
     )
+
+    parser.add_argument(
+        "--use_random_contexts",
+        action="store_true",
+        default=False,
+        help="Add random contexts to each document datset",
+    )
+
+    parser.add_argument(
+        "--random_contexts_count",
+        type=int,
+        default=10000,
+        help="Number of random contexts to add to each document in the dataset",
+    )
+
     # parser.add_argument("--llm_model", type=str, default="hf_lmsys/vicuna-7b-v1.3")
 
     # runtime arguments
@@ -88,14 +103,17 @@ def main(
     hidden_state_id=-1,
     aggregation="mean",
     query_choice=None,
-    dataset_split="validation",
+    dataset_split="train",
     doc_prob=1.0,
+    use_random_contexts=False,
+    random_contexts_count=10000,
 ):
     # Prepare dataset
     if prepare_dataset:
         logger.info("Preparing dataset...")
         prepare_data(
-            dataset_name, base_data_dir, debug, split=dataset_split, doc_prob=doc_prob
+            dataset_name, base_data_dir, debug, split=dataset_split, doc_prob=doc_prob,
+            use_random_contexts=use_random_contexts, random_contexts_count=random_contexts_count
         )
     else:
         logger.info("Dataset preparation skipped.")

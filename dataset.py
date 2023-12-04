@@ -34,9 +34,9 @@ def parse_args():
 def prepare_squad_dataset(
     base_data_dir,
     debug=False,
-    split="validation",
+    split="train",
     use_random_contexts=False,
-    rand_context_len=10000,
+    random_contexts_count=10000,
     doc_prob=1.0,
 ):
     """
@@ -47,7 +47,7 @@ def prepare_squad_dataset(
         debug: whether to use a small subset of the dataset for debugging
         split: train or validation
         use_random_contexts: whether to add random unrelated contexts
-        rand_context_len: number of random contexts to add
+        random_contexts_count: number of random contexts to add
         doc_prob: probability of mapping a context to a document
     """
     dataset_name = "squad"
@@ -113,14 +113,16 @@ def prepare_squad_dataset(
 
     # Add random contexts
     if use_random_contexts:
+        logger.info("Adding random unrelated contexts...")
         rand_contexts = generate_random_unrelated_contexts(
             base_data_dir, from_existing_unrelated=True, debug=debug, split=split
-        )[:rand_context_len]
-        total_rands = rand_context_len
+        )[:random_contexts_count]
+        total_rands = random_contexts_count
         startfrom = len(contexts)
         for i, rand_context in tqdm(enumerate(rand_contexts), total=total_rands):
             with open(os.path.join(documents_dir, f"{startfrom + i}.txt"), "w") as f:
                 f.write(rand_context)
+        logger.info(f"Total Random Contexts: {total_rands} added")
 
     # Save questions, answers, and their corresponding context ids
     questions = data_split["question"]
@@ -151,135 +153,116 @@ def prepare_quac_dataset(
     debug=False,
     split="train",
     use_random_contexts=False,
-    rand_context_len=10000,
+    random_contexts_count=10000,
 ):
     """
     Prepare QUAC dataset
     Parameters:
+        base_data_dir: path to folder where dataset will be saved
         debug: whether to use a small subset of the dataset for debugging
+        split: train or validation
+        use_random_contexts: whether to add random unrelated contexts
+        random_contexts_count: number of random contexts to add
     """
     dataset_name = "quac"
 
     # Load your QUAC dataset
     # Adjust the following line based on your actual dataset structure
     logger.info("Loading QUAC dataset...")
-    dataset = load_dataset("quac", split=split, cache_dir=base_data_dir)
+    data_split = load_dataset("quac", split=split, cache_dir=base_data_dir)
 
     logger.info(f"Preparing QUAC dataset in {split} split...")
-    data_split = dataset[split]
     if debug:
         logger.info("Preparing QUAC dataset in debug mode...")
         data_split = data_split.select(range(2000))
 
     # Extract necessary information for query engineering
-    dialogue_ids = data_split["dialogue_id"]
     wikipedia_page_titles = data_split["wikipedia_page_title"]
+    backgrounds = data_split["background"]
+    sectiontitles = data_split["section_title"]
     contexts = data_split["context"]
+
     questions = data_split["questions"]
-    answers = data_split["texts"]
+    answers = data_split["orig_answers"]
 
     # Save docs with query instruction
     documents = []
     docid_map = {}  # maps document titles to doc ids
-    context_docid_map = {}  # maps contexts to doc ids
-    context_ids = []
 
-    # Prompt the user to choose a query instruction
-    print("Choose a query instruction:")
-    print("1. 'Add summariser this document in 500 words' to prefix of every sentence")
-    print("2. 'Step by step response then plain bland response'")
-
-    user_choice = input("Enter your choice (1 or 2): ")
-
-    if user_choice == "1":
-        query_instruction = (
-            "Add summariser this document in 500 words to the prefix of every sentence:"
-        )
-    elif user_choice == "2":
-        query_instruction = "Step by step response then plain bland response:"
-    else:
-        print("Invalid choice. Using a default query instruction.")
-        query_instruction = "Provide information on the following topic:"
-
-    add_query_instruction(documents, query_instruction, contexts)
-
-    for i, (dialogue_id, wikipedia_page_title, context, question, answer) in tqdm(
-        enumerate(
-            zip(dialogue_ids, wikipedia_page_titles, contexts, questions, answers)
-        ),
-        total=len(questions),
+    logger.info("Preparing documents...")
+    for i, (wikipedia_page_title, background, sectiontitle, context, question, answer) in tqdm(
+            enumerate(
+                zip(wikipedia_page_titles, backgrounds, sectiontitles, contexts, questions, answers)),
+            total=len(questions)
     ):
         # Extract the needed info
-        title = wikipedia_page_title
-        wiki_context = context
+        title = wikipedia_page_title+":"+sectiontitle
 
-        # Check if document already exists
+        document = f"{wikipedia_page_title}:\n{background}\n\n{sectiontitle}:\n{context}"
+
         if title in docid_map:
             docid = docid_map[title]
         else:
             docid = len(documents)
             docid_map[title] = docid
-            documents.append("")
-
-        # Add context to document
-        if wiki_context not in context_docid_map:
-            context_docid_map[wiki_context] = docid
-            documents[docid] += f"{wiki_context}\n\n"
-
-        context_ids.append(context_docid_map[wiki_context])
-
-    # Save documents
-    documents_dir = get_document_folder(
-        base_data_dir, dataset_name, debug, delete_if_exists=True
-    )
+            documents.append(document)
+        
+    documents_dir = get_document_folder(base_data_dir=base_data_dir, dataset_name=dataset_name, debug=debug, delete_if_exists=True)
     logger.info(f"Saving documents to: {documents_dir}")
     for i, document in tqdm(enumerate(documents), total=len(documents)):
         with open(os.path.join(documents_dir, f"{i}.txt"), "w") as f:
             f.write(document)
-    logger.info(
-        f"Total Documents: {len(documents)}, Total Contexts: {len(context_docid_map)}"
-    )
+    logger.info(f"Total Documents: {len(documents)}")
 
+    # Add random contexts
     if use_random_contexts:
-        logger.info("Adding random contexts")
-        rand_contexts = generate_random_unrelated_contexts(
-            base_data_dir, from_existing_unrelated=True, debug=debug, split=split
-        )[:rand_context_len]
-        total_rands = rand_context_len
+        logger.info("Adding random unrelated contexts...")
+        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug, split=split)[:random_contexts_count]
+        total_rands = random_contexts_count
         startfrom = len(contexts)
         for i, rand_context in tqdm(enumerate(rand_contexts), total=total_rands):
             with open(os.path.join(documents_dir, f"{startfrom + i}.txt"), "w") as f:
                 f.write(rand_context)
-        logger.info("Random contexts added")
+        logger.info(f"Total Random Contexts: {total_rands} added")
 
     # Save QA pairs
     qa_file = get_qa_file(base_data_dir, dataset_name, debug)
     logger.info(f"Saving QA pairs to: {qa_file}")
     with open(qa_file, "w") as f:
-        for i, (dialogue_id, question, answer, context) in tqdm(
-            enumerate(zip(dialogue_ids, questions, texts, contexts)),
-            total=len(questions),
-        ):
-            f.write(f"{dialogue_id}\t{question}\t{answer}\t{context}\n")
+        for i, (question, answer, wikipedia_page_title, sectiontitle) in tqdm(enumerate(zip(questions, answers, wikipedia_page_titles, sectiontitles)), total=len(questions)):
+            context_id = docid_map[wikipedia_page_title+":"+sectiontitle]
+            # Questions sometime lack context (e.g. What happened in 1893?, multiple things could have happened hence title is required), we add this context as wikipedia page title
+            final_question = f'In regards to {wikipedia_page_title}:'
+            final_answer = '' 
+            # There are multiple questions in each row, we combine them together as a single question. Similarly multiple answers are combined together as a single answer
+            for i, each_question in enumerate(question):
+                if answer['texts'][i] != "CANNOTANSWER":
+                    final_question += each_question.strip() + " "
+                    final_answer += answer['texts'][i].strip() + " "
+                    f.write(f"{each_question.strip()}\t{answer['texts'][i].strip()}\t{context_id}\n")
+            f.write(f"{final_question.strip()}\t{final_answer.strip()}\t{context_id}\n")
 
 
-def prepare_trivia_dataset(
-    base_data_dir, debug=False, split="rc", use_random_contexts=False
-):
+def prepare_trivia_dataset(base_data_dir, debug=False, split="train", use_random_contexts=False, random_contexts_count=10000):
     """
     Prepare trivia_qa dataset
     Parameters:
+        base_data_dir: path to folder where dataset will be saved
         debug: whether to use a small subset of the dataset for debugging
+        split: train or validation
+        use_random_contexts: whether to add random unrelated contexts
+        random_contexts_count: number of random contexts to add
     """
     dataset_name = "trivia_qa"
 
     # Load your trivia dataset
     # Adjust the following line based on your actual dataset structure
     logger.info("Loading trivia dataset...")
-    dataset = load_dataset("trivia_qa", data_dir=base_data_dir, cache_dir=base_data_dir)
+    data_split = load_dataset("trivia_qa", name="rc", split=split,
+                           cache_dir=base_data_dir)
 
-    logger.info(f"Preparing trivia_qa dataset in {split} split...")
-    data_split = dataset[split]
+    logger.info(f"Loaded trivia_qa dataset for {split} split...")
+
     if debug:
         logger.info("Preparing trivia_qa dataset in debug mode...")
         data_split = data_split.select(range(2000))
@@ -288,53 +271,42 @@ def prepare_trivia_dataset(
     questions = data_split["question"]
     question_ids = data_split["question_id"]
     context_ids = []
+    questions_withdocuments = []
+    answers_withdocuments = []
 
     # Save docs
     documents = []
     docid_map = {}  # maps document titles to doc ids
     context_docid_map = {}  # maps contexts to doc ids
 
-    # Prompt the user to choose a query instruction
-    print("Choose a query instruction:")
-    print("1. 'Add summariser this document in 500 words' to prefix of every sentence")
-    print("2. 'Step by step response then plain bland response'")
 
-    user_choice = input("Enter your choice (1 or 2): ")
-
-    if user_choice == "1":
-        query_instruction = (
-            "Add summariser this document in 500 words to the prefix of every sentence:"
-        )
-    elif user_choice == "2":
-        query_instruction = "Step by step response then plain bland response:"
-    else:
-        print("Invalid choice. Using a default query instruction.")
-        query_instruction = "Provide information on the following topic:"
-
-    add_query_instruction(documents, query_instruction, entity_pages["wiki_context"])
-
-    for i, (question, question_id, entity_pages) in tqdm(
-        enumerate(zip(questions, question_ids, data_split["entity_pages"])),
-        total=len(questions),
+    logger.info("Preparing documents...")
+    for i, (question, entity_pages, answer) in tqdm(
+            enumerate(zip(questions, data_split["entity_pages"], data_split["answer"])),
+            total=len(questions)
     ):
         # Extract the needed info from entity_pages
-        title = entity_pages["title"]
-        wiki_context = entity_pages["wiki_context"]
+        title = ' '.join(entity_pages["title"])
+        wiki_context = ' '.join(entity_pages["wiki_context"])
+        answer_text = answer['value']
+        # Title, wiki_context and answer_text should not be empty
+        if len(title)>0 and len(wiki_context)>0 and len(answer_text)>0:
+            # Check if document already exists
+            questions_withdocuments.append(question)
+            answers_withdocuments.append(answer_text)
+            if title in docid_map:
+                docid = docid_map[title]
+            else:
+                docid = len(documents)
+                docid_map[title] = docid
+                documents.append("")
 
-        # Check if document already exists
-        if title in docid_map:
-            docid = docid_map[title]
-        else:
-            docid = len(documents)
-            docid_map[title] = docid
-            documents.append("")
+            # Add context to document
+            if wiki_context not in context_docid_map:
+                context_docid_map[wiki_context] = docid
+                documents[docid] += f"{wiki_context}\n\n"
 
-        # Add context to document
-        if wiki_context not in context_docid_map:
-            context_docid_map[wiki_context] = docid
-            documents[docid] += f"{wiki_context}\n\n"
-
-        context_ids.append(context_docid_map[wiki_context])
+            context_ids.append(context_docid_map[wiki_context])
 
     # Save documents
     documents_dir = get_document_folder(
@@ -348,24 +320,38 @@ def prepare_trivia_dataset(
         f"Total Documents: {len(documents)}, Total Contexts: {len(context_docid_map)}"
     )
 
+    # Add random contexts
+    if use_random_contexts:
+        logger.info("Adding random unrelated contexts...")
+        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug, split=split)[:random_contexts_count]
+        total_rands = random_contexts_count
+        startfrom = len(documents)
+        for i, rand_context in tqdm(enumerate(rand_contexts), total=total_rands):
+            with open(os.path.join(documents_dir, f"{startfrom + i}.txt"), "w") as f:
+                f.write(rand_context)
+        logger.info(f"Total Random Contexts: {total_rands} added")
+
     # Save QA pairs
+    logger.info("Saving QA pairs...")
     qa_file = get_qa_file(base_data_dir, dataset_name, debug)
     logger.info(f"Saving QA pairs to: {qa_file}")
     with open(qa_file, "w") as f:
-        for i, (question, question_id, context_id) in tqdm(
-            enumerate(zip(questions, question_ids, context_ids)), total=len(questions)
+        for i, (question, answer_text, context_id) in tqdm(
+                enumerate(zip(questions_withdocuments, answers_withdocuments, context_ids)),
+                total=len(questions_withdocuments)
         ):
-            f.write(f"{question.strip()}\t{question_id}\t{context_id}\n")
+            f.write(f"{question.strip()}\t{answer_text}\t{context_id}\n")
+    logger.info(f"Total QA pairs saved: {len(questions_withdocuments)}")
 
 
 def prepare_data(
     dataset_name,
     base_data_dir,
     debug=False,
-    use_random_contexts=False,
-    split="validation",
+    split="train",
     doc_prob=1.0,
-):
+    use_random_contexts=False,
+    random_contexts_count=10000):
     """
     Parameters:
         dataset_name: name of the dataset
@@ -375,18 +361,29 @@ def prepare_data(
         prepare_squad_dataset(
             base_data_dir,
             debug,
-            use_random_contexts=use_random_contexts,
             split=split,
             doc_prob=doc_prob,
+            use_random_contexts=use_random_contexts,
+            random_contexts_count=random_contexts_count
         )
+    
     elif dataset_name == "quac":
         prepare_quac_dataset(
-            base_data_dir, debug, use_random_contexts=use_random_contexts
+            base_data_dir,
+            debug,
+            split=split,
+            use_random_contexts=use_random_contexts,
+            random_contexts_count=random_contexts_count
         )
+
     elif dataset_name == "trivia_qa":
         prepare_trivia_dataset(
-            base_data_dir, debug, use_random_contexts=use_random_contexts
-        )
+            base_data_dir,
+            debug,
+            split=split,
+            use_random_contexts=use_random_contexts,
+            random_contexts_count=random_contexts_count
+            )
     else:
         raise ValueError("Dataset name not found")
 
