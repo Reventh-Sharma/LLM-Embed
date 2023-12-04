@@ -87,7 +87,7 @@ class LLMBasedEmbeddings(Embeddings):
         #     ]
         embeddings = []
         if self.aggregation == "mean":
-            for text in tqdm(texts):
+            for text in texts:
                 output = self.model(
                     self.tokenizer(text, return_tensors="pt")["input_ids"].to(
                         self.device
@@ -100,7 +100,7 @@ class LLMBasedEmbeddings(Embeddings):
                 output = output.mean(axis=0).cpu().detach().numpy()
                 embeddings.append(output)
         elif self.aggregation == "token_embeddings":
-            for text in tqdm(texts):
+            for text in texts:
                 output = self.model.model.embed_tokens(
                     self.tokenizer(text, return_tensors="pt")["input_ids"].to(
                         self.device
@@ -110,7 +110,7 @@ class LLMBasedEmbeddings(Embeddings):
                 output = output.mean(axis=0).cpu().detach().numpy()
                 embeddings.append(output)
         elif self.aggregation == "last_token":
-            for text in tqdm(texts):
+            for text in texts:
                 text = f"This sentence: {text} means in one word:"
                 output = self.model(
                     self.tokenizer(text, return_tensors="pt")["input_ids"].to(
@@ -124,7 +124,7 @@ class LLMBasedEmbeddings(Embeddings):
         else:
             raise NotImplementedError
 
-        logger.info(
+        logger.debug(
             f"Embedding shape: {embeddings[0].shape}, Total embeddings: {len(embeddings)}"
         )
         return embeddings

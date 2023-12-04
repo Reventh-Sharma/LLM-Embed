@@ -30,7 +30,13 @@ def parse_args():
     return args
 
 
-def prepare_squad_dataset(base_data_dir, debug=False, split="train", use_random_contexts=False, rand_context_len=10000):
+def prepare_squad_dataset(
+    base_data_dir,
+    debug=False,
+    split="train",
+    use_random_contexts=False,
+    rand_context_len=10000,
+):
     """
     Prepare dataset: SQuAD
     features: ['id', 'title', 'context', 'question', 'answers']
@@ -41,7 +47,9 @@ def prepare_squad_dataset(base_data_dir, debug=False, split="train", use_random_
 
     # load dataset
     logger.info("Preparing SQuAD dataset...")
-    data_split = load_dataset("squad", data_dir=base_data_dir, cache_dir=base_data_dir, split = split)
+    data_split = load_dataset(
+        "squad", data_dir=base_data_dir, cache_dir=base_data_dir, split=split
+    )
     logger.info(f"Prepared SQuAD dataset in {split} split...")
     if debug:
         logger.info("Preparing SQuAD dataset in debug mode...")
@@ -84,7 +92,9 @@ def prepare_squad_dataset(base_data_dir, debug=False, split="train", use_random_
     )
 
     if use_random_contexts:
-        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug, split=split)[:rand_context_len]
+        rand_contexts = generate_random_unrelated_contexts(
+            base_data_dir, from_existing_unrelated=True, debug=debug, split=split
+        )[:rand_context_len]
         total_rands = rand_context_len
         startfrom = len(contexts)
         for i, rand_context in tqdm(enumerate(rand_contexts), total=total_rands):
@@ -103,7 +113,6 @@ def prepare_squad_dataset(base_data_dir, debug=False, split="train", use_random_
             context_id_ = context_docid_map[context]
             f.write(f"{question.strip()}\t{answer['text'][0].strip()}\t{context_id_}\n")
 
-
     # # save unique-context-hash and context-id mapping
     # context_id_file = get_context_id_file(base_data_dir, dataset_name, debug)
     # logger.info(f"Saving context_id to: {context_id_file}")
@@ -113,7 +122,13 @@ def prepare_squad_dataset(base_data_dir, debug=False, split="train", use_random_
     #         f.write(f"{context_hash}\t{i}\n")
 
 
-def prepare_quac_dataset(base_data_dir, debug=False, split="train", use_random_contexts=False, rand_context_len=10000):
+def prepare_quac_dataset(
+    base_data_dir,
+    debug=False,
+    split="train",
+    use_random_contexts=False,
+    rand_context_len=10000,
+):
     """
     Prepare QUAC dataset
     Parameters:
@@ -147,14 +162,15 @@ def prepare_quac_dataset(base_data_dir, debug=False, split="train", use_random_c
 
     # Prompt the user to choose a query instruction
     print("Choose a query instruction:")
-    print(
-        "1. 'Add summariser this document in 500 words' to prefix of every sentence")
+    print("1. 'Add summariser this document in 500 words' to prefix of every sentence")
     print("2. 'Step by step response then plain bland response'")
 
     user_choice = input("Enter your choice (1 or 2): ")
 
     if user_choice == "1":
-        query_instruction = "Add summariser this document in 500 words to the prefix of every sentence:"
+        query_instruction = (
+            "Add summariser this document in 500 words to the prefix of every sentence:"
+        )
     elif user_choice == "2":
         query_instruction = "Step by step response then plain bland response:"
     else:
@@ -163,12 +179,11 @@ def prepare_quac_dataset(base_data_dir, debug=False, split="train", use_random_c
 
     add_query_instruction(documents, query_instruction, contexts)
 
-    for i, (
-    dialogue_id, wikipedia_page_title, context, question, answer) in tqdm(
-            enumerate(
-                zip(dialogue_ids, wikipedia_page_titles, contexts, questions,
-                    answers)),
-            total=len(questions)
+    for i, (dialogue_id, wikipedia_page_title, context, question, answer) in tqdm(
+        enumerate(
+            zip(dialogue_ids, wikipedia_page_titles, contexts, questions, answers)
+        ),
+        total=len(questions),
     ):
         # Extract the needed info
         title = wikipedia_page_title
@@ -203,7 +218,9 @@ def prepare_quac_dataset(base_data_dir, debug=False, split="train", use_random_c
 
     if use_random_contexts:
         logger.info("Adding random contexts")
-        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug, split=split)[:rand_context_len]
+        rand_contexts = generate_random_unrelated_contexts(
+            base_data_dir, from_existing_unrelated=True, debug=debug, split=split
+        )[:rand_context_len]
         total_rands = rand_context_len
         startfrom = len(contexts)
         for i, rand_context in tqdm(enumerate(rand_contexts), total=total_rands):
@@ -216,13 +233,15 @@ def prepare_quac_dataset(base_data_dir, debug=False, split="train", use_random_c
     logger.info(f"Saving QA pairs to: {qa_file}")
     with open(qa_file, "w") as f:
         for i, (dialogue_id, question, answer, context) in tqdm(
-                enumerate(zip(dialogue_ids, questions, texts, contexts)),
-                total=len(questions)
+            enumerate(zip(dialogue_ids, questions, texts, contexts)),
+            total=len(questions),
         ):
             f.write(f"{dialogue_id}\t{question}\t{answer}\t{context}\n")
 
 
-def prepare_trivia_dataset(base_data_dir, debug=False, split="rc", use_random_contexts=False):
+def prepare_trivia_dataset(
+    base_data_dir, debug=False, split="rc", use_random_contexts=False
+):
     """
     Prepare trivia_qa dataset
     Parameters:
@@ -233,8 +252,7 @@ def prepare_trivia_dataset(base_data_dir, debug=False, split="rc", use_random_co
     # Load your trivia dataset
     # Adjust the following line based on your actual dataset structure
     logger.info("Loading trivia dataset...")
-    dataset = load_dataset("trivia_qa", data_dir=base_data_dir,
-                           cache_dir=base_data_dir)
+    dataset = load_dataset("trivia_qa", data_dir=base_data_dir, cache_dir=base_data_dir)
 
     logger.info(f"Preparing trivia_qa dataset in {split} split...")
     data_split = dataset[split]
@@ -254,26 +272,26 @@ def prepare_trivia_dataset(base_data_dir, debug=False, split="rc", use_random_co
 
     # Prompt the user to choose a query instruction
     print("Choose a query instruction:")
-    print(
-        "1. 'Add summariser this document in 500 words' to prefix of every sentence")
+    print("1. 'Add summariser this document in 500 words' to prefix of every sentence")
     print("2. 'Step by step response then plain bland response'")
 
     user_choice = input("Enter your choice (1 or 2): ")
 
     if user_choice == "1":
-        query_instruction = "Add summariser this document in 500 words to the prefix of every sentence:"
+        query_instruction = (
+            "Add summariser this document in 500 words to the prefix of every sentence:"
+        )
     elif user_choice == "2":
         query_instruction = "Step by step response then plain bland response:"
     else:
         print("Invalid choice. Using a default query instruction.")
         query_instruction = "Provide information on the following topic:"
 
-    add_query_instruction(documents, query_instruction,
-                          entity_pages["wiki_context"])
+    add_query_instruction(documents, query_instruction, entity_pages["wiki_context"])
 
     for i, (question, question_id, entity_pages) in tqdm(
-            enumerate(zip(questions, question_ids, data_split["entity_pages"])),
-            total=len(questions)
+        enumerate(zip(questions, question_ids, data_split["entity_pages"])),
+        total=len(questions),
     ):
         # Extract the needed info from entity_pages
         title = entity_pages["title"]
@@ -311,29 +329,47 @@ def prepare_trivia_dataset(base_data_dir, debug=False, split="rc", use_random_co
     logger.info(f"Saving QA pairs to: {qa_file}")
     with open(qa_file, "w") as f:
         for i, (question, question_id, context_id) in tqdm(
-                enumerate(zip(questions, question_ids, context_ids)),
-                total=len(questions)
+            enumerate(zip(questions, question_ids, context_ids)), total=len(questions)
         ):
             f.write(f"{question.strip()}\t{question_id}\t{context_id}\n")
 
 
-def prepare_data(dataset_name, base_data_dir, debug=False, use_random_contexts=False):
+def prepare_data(
+    dataset_name,
+    base_data_dir,
+    debug=False,
+    use_random_contexts=False,
+    split="validation",
+):
     """
     Parameters:
         dataset_name: name of the dataset
         debug: whether to use a small subset of the dataset for debugging
     """
     if dataset_name == "squad":
-        prepare_squad_dataset(base_data_dir, debug, use_random_contexts=use_random_contexts)
+        prepare_squad_dataset(
+            base_data_dir, debug, use_random_contexts=use_random_contexts, split=split
+        )
     elif dataset_name == "quac":
-        prepare_quac_dataset(base_data_dir, debug, use_random_contexts=use_random_contexts)
+        prepare_quac_dataset(
+            base_data_dir, debug, use_random_contexts=use_random_contexts
+        )
     elif dataset_name == "trivia_qa":
-        prepare_trivia_dataset(base_data_dir, debug, use_random_contexts=use_random_contexts)
+        prepare_trivia_dataset(
+            base_data_dir, debug, use_random_contexts=use_random_contexts
+        )
     else:
         raise ValueError("Dataset name not found")
 
 
-def generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, dataset_name='pubmed_qa', name='pqa_artificial', debug=False, split="train"):
+def generate_random_unrelated_contexts(
+    base_data_dir,
+    from_existing_unrelated=True,
+    dataset_name="pubmed_qa",
+    name="pqa_artificial",
+    debug=False,
+    split="train",
+):
     """
     Prepare dataset: Unrelated Contexts (Default pubmed_qa), Since our QA documents don't have medical related questions
     Parameters:
@@ -345,18 +381,22 @@ def generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=Tr
     """
 
     if from_existing_unrelated:
-        try :
+        try:
             rand_data = load_dataset(dataset_name, name=name, cache_dir=base_data_dir)
-            logger.info(f"Successfully loaded existing unrelated contexts using {dataset_name}")
+            logger.info(
+                f"Successfully loaded existing unrelated contexts using {dataset_name}"
+            )
 
         except:
-            raise ValueError(f"Existing unrelated contexts not found from {dataset_name}, use random context generation using LLMS")
+            raise ValueError(
+                f"Existing unrelated contexts not found from {dataset_name}, use random context generation using LLMS"
+            )
 
         # Code specific to only pubmed_qa dataset
         rand_data = rand_data[split]
-        rand_contexts = rand_data['context']
+        rand_contexts = rand_data["context"]
         for i, context in tqdm(enumerate(rand_contexts), total=len(rand_contexts)):
-            rand_contexts[i] = ' '.join(context['contexts']).replace('\n', ' ').strip()
+            rand_contexts[i] = " ".join(context["contexts"]).replace("\n", " ").strip()
         if debug:
             rand_contexts = rand_contexts[:2000]
             logger.info("Debug mode is active, using only 2000 unrelated contexts")
