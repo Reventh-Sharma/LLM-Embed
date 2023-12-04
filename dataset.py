@@ -6,8 +6,6 @@ import numpy as np
 import shutil
 from datasets import load_dataset
 from tqdm import tqdm
-
-from query_engineering import add_query_instruction
 from utils import get_cache_dir, get_context_id_file, get_document_folder, get_qa_file
 from loguru import logger
 

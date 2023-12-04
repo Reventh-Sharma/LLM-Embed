@@ -162,6 +162,19 @@ def main(
     logger.info("Calculating metrics...")
     for _, row in tqdm(dataset.iterrows(), total=len(dataset)):
         question = row["question"]
+        if query_choice is not None:
+            if query_choice == "1":
+                query_prefix = "Answer this question in 10 words:"
+            elif query_choice == "2":
+                query_prefix = "You are a teaching assistant. Answer this question asked by your student:"
+            else:
+                query_prefix = ""   
+                question = f"{query_choice} {question}"
+        else:
+            query_prefix = ""   
+            question = f"{query_choice} {question}"
+
+
         doc_id = row["doc_id"]
 
         # get context from context_id

@@ -189,15 +189,14 @@ class LLMLangChainTutor:
         if query_choice == "1":
             query_prefix = "Summarize the following in 10 word: "
         elif query_choice == "2":
-            # TODO: Not sure why we need this prompt?
-            query_prefix = "Step by step response then plain bland response:"
+            query_prefix = "You are a teaching assistant. Explain this information to your students:"
         else:
             query_prefix = ""
         logger.info(f"Using query prefix: {query_prefix}")
 
         # generate vector store
         if query_prefix:
-            splitted_documents = add_query_instruction(splitted_documents, query_prefix)
+            splitted_documents = add_query_instruction(prefix, splitted_documents)
         self.gen_vectorstore = self.vector_store.from_documents(
             splitted_documents, self.embedding_model
         )
