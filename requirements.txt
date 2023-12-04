@@ -14,3 +14,4 @@ unstructured
 unstructured[pdf]
 sentence_transformers
 loguru
+InstructorEmbedding
