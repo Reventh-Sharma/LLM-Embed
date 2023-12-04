@@ -1,7 +1,7 @@
 from tqdm import tqdm
 
 
-def add_query_instruction(documents, prefix):
+def add_query_instruction(prefix, documents):
     """
     Add a query prefix to each document.
 
