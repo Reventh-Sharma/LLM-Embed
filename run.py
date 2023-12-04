@@ -147,7 +147,7 @@ def main(
         doc_id = row["doc_id"]
 
         # get context from context_id
-        relevant_documents = lmtutor.similarity_search_thres(question, k=15)
+        relevant_documents = lmtutor.similarity_search_thres(question, k=20)
         relevant_documents_ids = [
             int(doc.metadata["source"].split("/")[-1].split(".")[0])
             for doc in relevant_documents

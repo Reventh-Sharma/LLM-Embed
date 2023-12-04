@@ -120,13 +120,14 @@ class LLMLangChainTutor:
                 hidden_state_id=self.hidden_state_id,
             )
         else:
-            self.embedding_model = HuggingFaceEmbeddings(
-                model_kwargs={
-                    "device": self.embed_device,
-                },
-                encode_kwargs={"batch_size": 32},
-                cache_folder=self.cache_dir,
-            )
+            raise NotImplementedError
+            # self.embedding_model = HuggingFaceEmbeddings(
+            #     model_kwargs={
+            #         "device": self.embed_device,
+            #     },
+            #     encode_kwargs={"batch_size": 32},
+            #     cache_folder=self.cache_dir,
+            # )
 
     def _vectorstore_loader(self, vector_store):
         """
@@ -185,10 +186,8 @@ class LLMLangChainTutor:
         )
 
         # add query prefix
-        max_tokens = None
         if query_choice == "1":
             query_prefix = "Summarize the following in 10 word: "
-            max_tokens = 10
         elif query_choice == "2":
             # TODO: Not sure why we need this prompt?
             query_prefix = "Step by step response then plain bland response:"

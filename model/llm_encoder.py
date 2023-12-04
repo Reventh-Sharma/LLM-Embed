@@ -96,7 +96,7 @@ class LLMBasedEmbeddings(Embeddings):
 
                 # Don't include last token since it represent
                 # next token prediction
-                output = output[0, :-1, :]
+                output = output[0, :, :]
                 output = output.mean(axis=0).cpu().detach().numpy()
                 embeddings.append(output)
         elif self.aggregation == "token_embeddings":
