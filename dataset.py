@@ -34,9 +34,9 @@ def parse_args():
 def prepare_squad_dataset(
     base_data_dir,
     debug=False,
-    split="validation",
+    split="train",
     use_random_contexts=False,
-    rand_context_len=10000,
+    random_contexts_count=10000,
     doc_prob=1.0,
 ):
     """
@@ -47,7 +47,7 @@ def prepare_squad_dataset(
         debug: whether to use a small subset of the dataset for debugging
         split: train or validation
         use_random_contexts: whether to add random unrelated contexts
-        rand_context_len: number of random contexts to add
+        random_contexts_count: number of random contexts to add
         doc_prob: probability of mapping a context to a document
     """
     dataset_name = "squad"
@@ -113,14 +113,16 @@ def prepare_squad_dataset(
 
     # Add random contexts
     if use_random_contexts:
+        logger.info("Adding random unrelated contexts...")
         rand_contexts = generate_random_unrelated_contexts(
             base_data_dir, from_existing_unrelated=True, debug=debug, split=split
-        )[:rand_context_len]
-        total_rands = rand_context_len
+        )[:random_contexts_count]
+        total_rands = random_contexts_count
         startfrom = len(contexts)
         for i, rand_context in tqdm(enumerate(rand_contexts), total=total_rands):
             with open(os.path.join(documents_dir, f"{startfrom + i}.txt"), "w") as f:
                 f.write(rand_context)
+        logger.info(f"Total Random Contexts: {total_rands} added")
 
     # Save questions, answers, and their corresponding context ids
     questions = data_split["question"]
@@ -151,12 +153,16 @@ def prepare_quac_dataset(
     debug=False,
     split="train",
     use_random_contexts=False,
-    rand_context_len=10000,
+    random_contexts_count=10000,
 ):
     """
     Prepare QUAC dataset
     Parameters:
+        base_data_dir: path to folder where dataset will be saved
         debug: whether to use a small subset of the dataset for debugging
+        split: train or validation
+        use_random_contexts: whether to add random unrelated contexts
+        random_contexts_count: number of random contexts to add
     """
     dataset_name = "quac"
 
@@ -183,7 +189,7 @@ def prepare_quac_dataset(
     documents = []
     docid_map = {}  # maps document titles to doc ids
 
-
+    logger.info("Preparing documents...")
     for i, (wikipedia_page_title, background, sectiontitle, context, question, answer) in tqdm(
             enumerate(
                 zip(wikipedia_page_titles, backgrounds, sectiontitles, contexts, questions, answers)),
@@ -208,13 +214,16 @@ def prepare_quac_dataset(
             f.write(document)
     logger.info(f"Total Documents: {len(documents)}")
 
+    # Add random contexts
     if use_random_contexts:
-        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug, split=split)[:rand_context_len]
-        total_rands = rand_context_len
+        logger.info("Adding random unrelated contexts...")
+        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug, split=split)[:random_contexts_count]
+        total_rands = random_contexts_count
         startfrom = len(contexts)
         for i, rand_context in tqdm(enumerate(rand_contexts), total=total_rands):
             with open(os.path.join(documents_dir, f"{startfrom + i}.txt"), "w") as f:
                 f.write(rand_context)
+        logger.info(f"Total Random Contexts: {total_rands} added")
 
     # Save QA pairs
     qa_file = get_qa_file(base_data_dir, dataset_name, debug)
@@ -234,11 +243,15 @@ def prepare_quac_dataset(
             f.write(f"{final_question.strip()}\t{final_answer.strip()}\t{context_id}\n")
 
 
-def prepare_trivia_dataset(base_data_dir, debug=False, split="train", use_random_contexts=False, rand_context_len=10000):
+def prepare_trivia_dataset(base_data_dir, debug=False, split="train", use_random_contexts=False, random_contexts_count=10000):
     """
     Prepare trivia_qa dataset
     Parameters:
+        base_data_dir: path to folder where dataset will be saved
         debug: whether to use a small subset of the dataset for debugging
+        split: train or validation
+        use_random_contexts: whether to add random unrelated contexts
+        random_contexts_count: number of random contexts to add
     """
     dataset_name = "trivia_qa"
 
@@ -267,6 +280,7 @@ def prepare_trivia_dataset(base_data_dir, debug=False, split="train", use_random
     context_docid_map = {}  # maps contexts to doc ids
 
 
+    logger.info("Preparing documents...")
     for i, (question, entity_pages, answer) in tqdm(
             enumerate(zip(questions, data_split["entity_pages"], data_split["answer"])),
             total=len(questions)
@@ -275,6 +289,7 @@ def prepare_trivia_dataset(base_data_dir, debug=False, split="train", use_random
         title = ' '.join(entity_pages["title"])
         wiki_context = ' '.join(entity_pages["wiki_context"])
         answer_text = answer['value']
+        # Title, wiki_context and answer_text should not be empty
         if len(title)>0 and len(wiki_context)>0 and len(answer_text)>0:
             # Check if document already exists
             questions_withdocuments.append(question)
@@ -305,15 +320,19 @@ def prepare_trivia_dataset(base_data_dir, debug=False, split="train", use_random
         f"Total Documents: {len(documents)}, Total Contexts: {len(context_docid_map)}"
     )
 
+    # Add random contexts
     if use_random_contexts:
-        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug, split=split)[:rand_context_len]
-        total_rands = rand_context_len
+        logger.info("Adding random unrelated contexts...")
+        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug, split=split)[:random_contexts_count]
+        total_rands = random_contexts_count
         startfrom = len(documents)
         for i, rand_context in tqdm(enumerate(rand_contexts), total=total_rands):
             with open(os.path.join(documents_dir, f"{startfrom + i}.txt"), "w") as f:
                 f.write(rand_context)
+        logger.info(f"Total Random Contexts: {total_rands} added")
 
     # Save QA pairs
+    logger.info("Saving QA pairs...")
     qa_file = get_qa_file(base_data_dir, dataset_name, debug)
     logger.info(f"Saving QA pairs to: {qa_file}")
     with open(qa_file, "w") as f:
@@ -322,16 +341,17 @@ def prepare_trivia_dataset(base_data_dir, debug=False, split="train", use_random
                 total=len(questions_withdocuments)
         ):
             f.write(f"{question.strip()}\t{answer_text}\t{context_id}\n")
+    logger.info(f"Total QA pairs saved: {len(questions_withdocuments)}")
 
 
 def prepare_data(
     dataset_name,
     base_data_dir,
     debug=False,
-    use_random_contexts=False,
-    split="validation",
+    split="train",
     doc_prob=1.0,
-, rand_context_len=10000):
+    use_random_contexts=False,
+    random_contexts_count=10000):
     """
     Parameters:
         dataset_name: name of the dataset
@@ -341,17 +361,29 @@ def prepare_data(
         prepare_squad_dataset(
             base_data_dir,
             debug,
-            use_random_contexts=use_random_contexts,
             split=split,
             doc_prob=doc_prob,
+            use_random_contexts=use_random_contexts,
+            random_contexts_count=random_contexts_count
         )
-        prepare_squad_dataset(base_data_dir, debug, use_random_contexts=use_random_contexts, rand_context_len=rand_context_len)
+    
     elif dataset_name == "quac":
-        prepare_quac_dataset(base_data_dir, debug, use_random_contexts=use_random_contexts, rand_context_len=rand_context_len)
+        prepare_quac_dataset(
+            base_data_dir,
+            debug,
+            split=split,
+            use_random_contexts=use_random_contexts,
+            random_contexts_count=random_contexts_count
+        )
+
     elif dataset_name == "trivia_qa":
         prepare_trivia_dataset(
-            base_data_dir, debug, use_random_contexts=use_random_contexts
-        , rand_context_len=rand_context_len)
+            base_data_dir,
+            debug,
+            split=split,
+            use_random_contexts=use_random_contexts,
+            random_contexts_count=random_contexts_count
+            )
     else:
         raise ValueError("Dataset name not found")
 
