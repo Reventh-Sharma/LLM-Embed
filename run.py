@@ -17,6 +17,7 @@ import torch
 handler = {"sink": sys.stdout, "level": "INFO"}
 logger.configure(handlers=[handler])
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
 
@@ -25,6 +26,12 @@ def parse_args():
     parser.add_argument("--dataset_name", type=str, default="squad")
     parser.add_argument(
         "--dataset_split", type=str, default="validation", help="train or validation"
+    )
+    parser.add_argument(
+        "--doc_prob",
+        type=float,
+        default=1.0,
+        help="probability that a context will be added to its corresponding document. If 1.0, all contexts will be added to their corresponding document and if 0.0, no context will be added to their corresponding document and each context will be added as a separate document",
     )
 
     # conversation arguments
@@ -82,11 +89,14 @@ def main(
     aggregation="mean",
     query_choice=None,
     dataset_split="validation",
+    doc_prob=1.0,
 ):
     # Prepare dataset
     if prepare_dataset:
         logger.info("Preparing dataset...")
-        prepare_data(dataset_name, base_data_dir, debug, split=dataset_split)
+        prepare_data(
+            dataset_name, base_data_dir, debug, split=dataset_split, doc_prob=doc_prob
+        )
     else:
         logger.info("Dataset preparation skipped.")
 
