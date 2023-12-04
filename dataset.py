@@ -2,7 +2,8 @@ import argparse
 import hashlib
 import os
 import pandas as pd
-
+import numpy as np
+import shutil
 from datasets import load_dataset
 from tqdm import tqdm
 
@@ -30,19 +31,32 @@ def parse_args():
     return args
 
 
-def prepare_squad_dataset(base_data_dir, debug=False, split="train", use_random_contexts=False, rand_context_len=10000):
+def prepare_squad_dataset(
+    base_data_dir,
+    debug=False,
+    split="validation",
+    use_random_contexts=False,
+    rand_context_len=10000,
+    doc_prob=1.0,
+):
     """
     Prepare dataset: SQuAD
     features: ['id', 'title', 'context', 'question', 'answers']
     Parameters:
+        base_data_dir: path to folder where dataset will be saved
         debug: whether to use a small subset of the dataset for debugging
+        split: train or validation
+        use_random_contexts: whether to add random unrelated contexts
+        rand_context_len: number of random contexts to add
+        doc_prob: probability of mapping a context to a document
     """
     dataset_name = "squad"
 
     # load dataset
-    logger.info("Preparing SQuAD dataset...")
-    data_split = load_dataset("squad", data_dir=base_data_dir, cache_dir=base_data_dir, split = split)
-    logger.info(f"Prepared SQuAD dataset in {split} split...")
+    logger.info(f"Prepared SQuAD dataset in {split} split and doc_prob = {doc_prob}")
+    data_split = load_dataset(
+        "squad", data_dir=base_data_dir, cache_dir=base_data_dir, split=split
+    )
     if debug:
         logger.info("Preparing SQuAD dataset in debug mode...")
         data_split = data_split.select(range(2000))
@@ -58,33 +72,50 @@ def prepare_squad_dataset(base_data_dir, debug=False, split="train", use_random_
     for i, (context, title) in tqdm(
         enumerate(zip(contexts, titles)), total=len(contexts)
     ):
-        # Check if document already exists
-        if title in docid_map:
+        if context in docid_map:
+            docid = docid_map[context]
+        elif context in context_docid_map:
             docid = docid_map[title]
         else:
-            docid = len(documents)
-            docid_map[title] = docid
-            documents.append("")
+            # with probability `doc_prob``, map context correctly to documents
+            if np.random.binomial(1, doc_prob):
+                if title in docid_map:
+                    docid = docid_map[title]
+                else:
+                    docid = len(documents)
+                    docid_map[title] = docid
+                    documents.append("")
 
-        # Add context to document
-        if not context in context_docid_map:
-            context_docid_map[context] = docid
-            documents[docid] += f"{context}\n\n"
+                # Add context to document
+                if not context in context_docid_map:
+                    context_docid_map[context] = docid
+                    documents[docid] += f"{context}\n\n"
+            else:
+                docid = len(documents)
+                docid_map[context] = docid
+                documents.append(f"{context}\n\n")
 
     # Save documents
     documents_dir = get_document_folder(
         base_data_dir, dataset_name, debug, delete_if_exists=True
     )
-    logger.info(f"Saving documents to: {documents_dir}")
+    if os.path.exists(documents_dir):
+        logger.info(f"Deleting existing documents in {documents_dir}")
+        shutil.rmtree(documents_dir)
+    os.makedirs(documents_dir)
     for i, document in tqdm(enumerate(documents), total=len(documents)):
         with open(os.path.join(documents_dir, f"{i}.txt"), "w") as f:
             f.write(document)
+    logger.info(f"Saving documents to: {documents_dir}")
     logger.info(
-        f"Total Documents: {len(documents)}, Total Contexts: {len(context_docid_map)}"
+        f"Total Documents: {len(documents)}, Total Contexts: {len(set(contexts))}"
     )
 
+    # Add random contexts
     if use_random_contexts:
-        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug, split=split)[:rand_context_len]
+        rand_contexts = generate_random_unrelated_contexts(
+            base_data_dir, from_existing_unrelated=True, debug=debug, split=split
+        )[:rand_context_len]
         total_rands = rand_context_len
         startfrom = len(contexts)
         for i, rand_context in tqdm(enumerate(rand_contexts), total=total_rands):
@@ -100,9 +131,11 @@ def prepare_squad_dataset(base_data_dir, debug=False, split="train", use_random_
         for i, (question, answer, context) in tqdm(
             enumerate(zip(questions, answers, contexts)), total=len(questions)
         ):
-            context_id_ = context_docid_map[context]
+            if context in context_docid_map:
+                context_id_ = context_docid_map[context]
+            else:
+                context_id_ = docid_map[context]
             f.write(f"{question.strip()}\t{answer['text'][0].strip()}\t{context_id_}\n")
-
 
     # # save unique-context-hash and context-id mapping
     # context_id_file = get_context_id_file(base_data_dir, dataset_name, debug)
@@ -113,7 +146,13 @@ def prepare_squad_dataset(base_data_dir, debug=False, split="train", use_random_
     #         f.write(f"{context_hash}\t{i}\n")
 
 
-def prepare_quac_dataset(base_data_dir, debug=False, split="train", use_random_contexts=False, rand_context_len=10000):
+def prepare_quac_dataset(
+    base_data_dir,
+    debug=False,
+    split="train",
+    use_random_contexts=False,
+    rand_context_len=10000,
+):
     """
     Prepare QUAC dataset
     Parameters:
@@ -285,23 +324,46 @@ def prepare_trivia_dataset(base_data_dir, debug=False, split="train", use_random
             f.write(f"{question.strip()}\t{answer_text}\t{context_id}\n")
 
 
-def prepare_data(dataset_name, base_data_dir, debug=False, use_random_contexts=False, rand_context_len=10000):
+def prepare_data(
+    dataset_name,
+    base_data_dir,
+    debug=False,
+    use_random_contexts=False,
+    split="validation",
+    doc_prob=1.0,
+, rand_context_len=10000):
     """
     Parameters:
         dataset_name: name of the dataset
         debug: whether to use a small subset of the dataset for debugging
     """
     if dataset_name == "squad":
+        prepare_squad_dataset(
+            base_data_dir,
+            debug,
+            use_random_contexts=use_random_contexts,
+            split=split,
+            doc_prob=doc_prob,
+        )
         prepare_squad_dataset(base_data_dir, debug, use_random_contexts=use_random_contexts, rand_context_len=rand_context_len)
     elif dataset_name == "quac":
         prepare_quac_dataset(base_data_dir, debug, use_random_contexts=use_random_contexts, rand_context_len=rand_context_len)
     elif dataset_name == "trivia_qa":
-        prepare_trivia_dataset(base_data_dir, debug, use_random_contexts=use_random_contexts, rand_context_len=rand_context_len)
+        prepare_trivia_dataset(
+            base_data_dir, debug, use_random_contexts=use_random_contexts
+        , rand_context_len=rand_context_len)
     else:
         raise ValueError("Dataset name not found")
 
 
-def generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, dataset_name='pubmed_qa', name='pqa_artificial', debug=False, split="train"):
+def generate_random_unrelated_contexts(
+    base_data_dir,
+    from_existing_unrelated=True,
+    dataset_name="pubmed_qa",
+    name="pqa_artificial",
+    debug=False,
+    split="train",
+):
     """
     Prepare dataset: Unrelated Contexts (Default pubmed_qa), Since our QA documents don't have medical related questions
     Parameters:
@@ -313,18 +375,22 @@ def generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=Tr
     """
 
     if from_existing_unrelated:
-        try :
+        try:
             rand_data = load_dataset(dataset_name, name=name, cache_dir=base_data_dir)
-            logger.info(f"Successfully loaded existing unrelated contexts using {dataset_name}")
+            logger.info(
+                f"Successfully loaded existing unrelated contexts using {dataset_name}"
+            )
 
         except:
-            raise ValueError(f"Existing unrelated contexts not found from {dataset_name}, use random context generation using LLMS")
+            raise ValueError(
+                f"Existing unrelated contexts not found from {dataset_name}, use random context generation using LLMS"
+            )
 
         # Code specific to only pubmed_qa dataset
         rand_data = rand_data[split]
-        rand_contexts = rand_data['context']
+        rand_contexts = rand_data["context"]
         for i, context in tqdm(enumerate(rand_contexts), total=len(rand_contexts)):
-            rand_contexts[i] = ' '.join(context['contexts']).replace('\n', ' ').strip()
+            rand_contexts[i] = " ".join(context["contexts"]).replace("\n", " ").strip()
         if debug:
             rand_contexts = rand_contexts[:2000]
             logger.info("Debug mode is active, using only 2000 unrelated contexts")
