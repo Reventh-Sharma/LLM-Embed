@@ -53,7 +53,7 @@ do
 done
 
 MODEL_LIST=("hf_lmsys/vicuna-13b-v1.3" "hf_meta-llama/Llama-2-13b-chat-hf", "instruction_embedding")
-RAND_CONTEXT_COUNT=("0", "50000", "100000", "150000", "200000")
+RAND_CONTEXT_COUNT=("2500", "5000", "7500", "10000")
 
 for MODEL in "${MODEL_LIST[@]}"
 do
@@ -68,6 +68,19 @@ do
         done
     done
 done
+
+# QUERY_CHOICE=("1", "2")
+
+# for QR_CHOICE in "${QUERY_CHOICE[@]}"
+# do
+#     if [ $counter -eq $SLURM_ARRAY_TASK_ID ]
+#             then
+#                 echo "Running model: $MODEL with layer: $LAYER on GPU: $CUDA_VISIBLE_DEVICES for dataset: $DATASET"
+#                 python run.py --prepare_dataset --dataset_name "squad" --embedding_model $MODEL --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id -1 --aggregation "mean" --use_random_contexts --random_contexts_count $RAND_CONTEXT_COUNT
+#             fi
+#             ((counter++))
+#     done
+# done
 
 
 
