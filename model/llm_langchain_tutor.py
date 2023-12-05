@@ -196,7 +196,7 @@ class LLMLangChainTutor:
 
         # generate vector store
         if query_prefix:
-            splitted_documents = add_query_instruction(prefix, splitted_documents)
+            splitted_documents = add_query_instruction(query_prefix, splitted_documents)
         self.gen_vectorstore = self.vector_store.from_documents(
             splitted_documents, self.embedding_model
         )
