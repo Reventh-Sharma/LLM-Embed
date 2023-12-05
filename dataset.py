@@ -370,6 +370,9 @@ def get_course_data(base_data_dir, debug=False, weblink="http://zhiting.ucsd.edu
     for i, pdf in tqdm(enumerate(list_of_pdfs), total=len(list_of_pdfs)):
             with open(os.path.join(documents_dir, f"{i}.pdf"), "wb") as f:
                 f.write(requests.get(pdf).content)
+            # Check file length to see if it is empty
+            if os.path.getsize(os.path.join(documents_dir, f"{i}.pdf")) < 10000:
+                os.remove(os.path.join(documents_dir, f"{i}.pdf"))
     logger.info(
         f"Total Documents: {len(list_of_pdfs)}"
     )
