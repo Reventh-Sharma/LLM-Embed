@@ -6,6 +6,8 @@ import numpy as np
 import shutil
 from datasets import load_dataset
 from tqdm import tqdm
+import requests
+from bs4 import BeautifulSoup
 from utils import get_cache_dir, get_context_id_file, get_document_folder, get_qa_file
 from loguru import logger
 
@@ -342,6 +344,29 @@ def prepare_trivia_dataset(base_data_dir, debug=False, split="train", use_random
     logger.info(f"Total QA pairs saved: {len(questions_withdocuments)}")
 
 
+def get_course_data(base_data_dir, debug=False, weblink="http://zhiting.ucsd.edu/teaching/dsc250fall2023/lectures.html"):
+
+    list_of_pdfs = []
+    # Get list of pdfs from the course website
+    r = requests.get(weblink)
+    soup = BeautifulSoup(r.text, 'html.parser')
+    for link in soup.find_all('a'):
+        if link.get('href')[-3:] == 'pdf':
+            list_of_pdfs.append(f"{weblink}/{link.get('href')[2:]}")
+
+    # Save pdfs
+    documents_dir = get_document_folder(
+        base_data_dir, "course", debug, delete_if_exists=True
+    )
+    logger.info(f"Saving documents to: {documents_dir}")
+    for i, pdf in tqdm(enumerate(list_of_pdfs), total=len(list_of_pdfs)):
+        with open(os.path.join(documents_dir, f"{i}.pdf"), "wb") as f:
+            f.write(requests.get(pdf).content)
+    logger.info(
+        f"Total Documents: {len(list_of_pdfs)}"
+    )
+
+
 def prepare_data(
     dataset_name,
     base_data_dir,
@@ -349,7 +374,8 @@ def prepare_data(
     split="train",
     doc_prob=1.0,
     use_random_contexts=False,
-    random_contexts_count=10000):
+    random_contexts_count=10000,
+    weblink="http://zhiting.ucsd.edu/teaching/dsc250fall2023/lectures.html"):
     """
     Parameters:
         dataset_name: name of the dataset
@@ -382,6 +408,14 @@ def prepare_data(
             use_random_contexts=use_random_contexts,
             random_contexts_count=random_contexts_count
             )
+    
+    elif dataset_name == "course":
+        get_course_data(
+            base_data_dir=base_data_dir,
+            debug=debug,
+            weblink=weblink
+        )
+
     else:
         raise ValueError("Dataset name not found")
 

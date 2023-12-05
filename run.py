@@ -35,12 +35,12 @@ def parse_args():
     )
 
     # conversation arguments
-    # parser.add_argument(
-    #     "--prompt",
-    #     type=str,
-    #     default="what's the course about?",
-    #     help="Prompt to start conversation",
-    # )
+    parser.add_argument(
+        "--prompt",
+        type=str,
+        default="what's the course about?",
+        help="Prompt to start conversation",
+    )
     parser.add_argument("--embedding_model", type=str, default="")
     parser.add_argument("--hidden_state_id", type=int, default=-1)
     parser.add_argument("--aggregation", type=str, default="mean")
@@ -65,7 +65,7 @@ def parse_args():
         help="Number of random contexts to add to each document in the dataset",
     )
 
-    # parser.add_argument("--llm_model", type=str, default="hf_lmsys/vicuna-7b-v1.3")
+    parser.add_argument("--llm_model", type=str, default="hf_lmsys/vicuna-7b-v1.3")
 
     # runtime arguments
     parser.add_argument(
@@ -74,7 +74,7 @@ def parse_args():
         default=get_cache_dir(),
         help="Path to folder containing data",
     )
-    # parser.add_argument("--llm_device", type=int, default=0)
+    parser.add_argument("--llm_device", type=int, default=0)
     parser.add_argument("--embed_device", type=int, default=0)
     parser.add_argument(
         "--debug",
@@ -84,6 +84,10 @@ def parse_args():
     )
     parser.add_argument("--ext_type", type=str, default="*.txt")
 
+    parser.add_argument("--tutor", action="store_true", default=False, help="Initialize as tutor to answer prompts if True")
+
+    parser.add_argument("--weblink", default="http://zhiting.ucsd.edu/teaching/dsc250fall2023/lectures.html", help="Source for course files")
+
     # parse arguments
     args = parser.parse_args()
     return args
@@ -92,11 +96,11 @@ def parse_args():
 def main(
     dataset_name,
     embedding_model,
-    # llm_model,
-    # prompt,
+    llm_model,
+    prompt,
     base_data_dir,
     prepare_dataset=False,
-    # llm_device="cuda:0" if torch.cuda.is_available() else "cpu",
+    llm_device="cuda:0" if torch.cuda.is_available() else "cpu",
     embed_device="cuda:0" if torch.cuda.is_available() else "cpu",
     debug=False,
     ext_type="*.txt",
@@ -107,13 +111,16 @@ def main(
     doc_prob=1.0,
     use_random_contexts=False,
     random_contexts_count=10000,
+    tutor = False,
+    weblink = "http://zhiting.ucsd.edu/teaching/dsc250fall2023/lectures.html"
 ):
     # Prepare dataset
     if prepare_dataset:
         logger.info("Preparing dataset...")
         prepare_data(
             dataset_name, base_data_dir, debug, split=dataset_split, doc_prob=doc_prob,
-            use_random_contexts=use_random_contexts, random_contexts_count=random_contexts_count
+            use_random_contexts=use_random_contexts, random_contexts_count=random_contexts_count,
+            weblink=weblink
         )
     else:
         logger.info("Dataset preparation skipped.")
@@ -121,9 +128,9 @@ def main(
     # Create LLMLangChainTutor
     lmtutor = LLMLangChainTutor(
         embedding=embedding_model,
-        # llm=llm_model,
+        llm=llm_model,
         embed_device=embed_device,
-        # llm_device=llm_device,
+        llm_device=llm_device,
         cache_dir=base_data_dir,
         debug=debug,
         token="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",
@@ -153,75 +160,64 @@ def main(
 
     # Load dataset
     # Dataset format: [question, answer, context_id]
-    logger.info("Loading dataset...")
-    dataset = get_parsed_data(dataset_name, base_data_dir=base_data_dir, debug=debug)
+    if not tutor:
+        logger.info("Loading dataset...")
+        dataset = get_parsed_data(dataset_name, base_data_dir=base_data_dir, debug=debug)
 
-    # Initialize instance of EmbeddingModelMetrics
-    # iterate over (question, context_id) pairs
-    true_label, pred_labels = [], []
-    logger.info("Calculating metrics...")
-    for _, row in tqdm(dataset.iterrows(), total=len(dataset)):
-        question = row["question"]
-        if query_choice is not None:
-            if query_choice == "1":
-                query_prefix = "Answer this question in 10 words:"
-            elif query_choice == "2":
-                query_prefix = "You are a teaching assistant. Answer this question asked by your student:"
+        # Initialize instance of EmbeddingModelMetrics
+        # iterate over (question, context_id) pairs
+        true_label, pred_labels = [], []
+        logger.info("Calculating metrics...")
+        for _, row in tqdm(dataset.iterrows(), total=len(dataset)):
+            question = row["question"]
+            if query_choice is not None:
+                if query_choice == "1":
+                    query_prefix = "Answer this question in 10 words:"
+                elif query_choice == "2":
+                    query_prefix = "You are a teaching assistant. Answer this question asked by your student:"
+                else:
+                    query_prefix = ""   
+                question = f"{query_prefix} {question}"
             else:
                 query_prefix = ""   
-                question = f"{query_choice} {question}"
-        else:
-            query_prefix = ""   
-            question = f"{query_choice} {question}"
+                question = f"{query_prefix} {question}"
 
 
-        doc_id = row["doc_id"]
+            doc_id = row["doc_id"]
 
-        # get context from context_id
-        relevant_documents = lmtutor.similarity_search_thres(question, k=20)
-        relevant_documents_ids = [
-            int(doc.metadata["source"].split("/")[-1].split(".")[0])
-            for doc in relevant_documents
-        ]
+            # get context from context_id
+            relevant_documents = lmtutor.similarity_search_thres(question, k=20)
+            relevant_documents_ids = [
+                int(doc.metadata["source"].split("/")[-1].split(".")[0])
+                for doc in relevant_documents
+            ]
 
-        true_label.append(doc_id)
-        pred_labels.append(relevant_documents_ids)
+            true_label.append(doc_id)
+            pred_labels.append(relevant_documents_ids)
 
-    # convert to numpy arrays
-    true_label = np.array(true_label)
-    pred_labels = np.array(pred_labels)
+        # convert to numpy arrays
+        true_label = np.array(true_label)
+        pred_labels = np.array(pred_labels)
 
-    np.save(f"{base_data_dir}/true_label.npy", true_label)
-    np.save(f"{base_data_dir}/pred_labels.npy", pred_labels)
+        # np.save(f"{base_data_dir}/true_label.npy", true_label)
+        # np.save(f"{base_data_dir}/pred_labels.npy", pred_labels)
 
-    # print metrics
-    logger.info("Calculating metrics...")
-    metrics_calculator = EmbeddingModelMetrics(true_label, pred_labels)
-    logger.info(f"Recall@1: {metrics_calculator.calculate_recall(1)}")
-    logger.info(f"Recall@5: {metrics_calculator.calculate_recall(5)}")
-    logger.info(f"Recall@10: {metrics_calculator.calculate_recall(10)}")
-    logger.info(f"Average document rank: {metrics_calculator.calculate_rank()}")
+        # print metrics
+        logger.info("Calculating metrics...")
+        metrics_calculator = EmbeddingModelMetrics(true_label, pred_labels)
+        logger.info(f"Recall@1: {metrics_calculator.calculate_recall(1)}")
+        logger.info(f"Recall@5: {metrics_calculator.calculate_recall(5)}")
+        logger.info(f"Recall@10: {metrics_calculator.calculate_recall(10)}")
+        logger.info(f"Average document rank: {metrics_calculator.calculate_rank()}")
 
-    # # td_rank = np.inf
-    #     # if len(np.where(np.array(relevant_documents_ids)==doc_id)[0])>0:
-    #     #     td_rank = np.where(np.array(relevant_documents_ids)==doc_id)[0][0] + 1
-    #     # true_label_rank.append(td_rank)
-    #     # true_label.append(1)
-
-    # # Calculate metrics
-    # recall_atk = []
-    # for k in range(1, 17, 5):
-    #     pred_labels = [1 if td_rank<=k else 0 for td_rank in true_label_rank]
-    #     recall_atk.append(np.sum(pred_labels) / np.sum(true_label))
-
-    # print("Compare", len([td_rank for td_rank in true_label_rank if td_rank>0]), len(true_label_rank))
-    # avg_discounted_rank = np.mean(np.array([1/(np.log2(td_rank)) for td_rank in true_label_rank if td_rank>0]))
-    # avg_recalled_rank = np.mean(np.array([td_rank for td_rank in true_label_rank if td_rank<np.inf]))
-
-    # # Initialize and start conversation
-    # lmtutor.conversational_qa_init()
-    # output = lmtutor.conversational_qa(user_input=prompt)
-    # logger.info(output)
+    else:
+        # Initialize and start conversation
+        logger.info(f"Generating response for prompts: {prompt}")
+        lmtutor.conversational_qa_init()
+        prompts = prompt.split("?")
+        for prompt_i in prompts:
+            output = lmtutor.conversational_qa(user_input=prompt_i)
+            logger.info(output)
 
 
 if __name__ == "__main__":
