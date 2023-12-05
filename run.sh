@@ -33,18 +33,38 @@ EMBEDING_MODEL_LAYER=("-1")
 TYPES=("mean")
 counter=0
 
-for MODEL in "${MODEL_LIST[@]}"
+## All datasets
+DATASET_LIST=("squad" "quac" "trivia_qa")
+
+for DATASET in "${DATASET_LIST[@]}"
 do
-   for LAYER in "${EMBEDING_MODEL_LAYER[@]}"
-   do
-       if [ $counter -eq $SLURM_ARRAY_TASK_ID ]
-       then
-           echo "Running model: $MODEL with layer: $LAYER on GPU: $CUDA_VISIBLE_DEVICES"
-           python run.py --prepare_dataset --dataset_name "squad" --embedding_model $MODEL --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id $LAYER --aggregation "mean"
-       fi
-       ((counter++))
-   done
+    for MODEL in "${MODEL_LIST[@]}"
+    do
+        for LAYER in "${EMBEDING_MODEL_LAYER[@]}"
+        do
+            if [ $counter -eq $SLURM_ARRAY_TASK_ID ]
+            then
+                echo "Running model: $MODEL with layer: $LAYER on GPU: $CUDA_VISIBLE_DEVICES for dataset: $DATASET"
+                python run.py --prepare_dataset --dataset_name $DATASET --embedding_model $MODEL --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id $LAYER --aggregation "mean"
+            fi
+            ((counter++))
+        done
+    done
 done
+
+## Squad Data
+#for MODEL in "${MODEL_LIST[@]}"
+#do
+#   for LAYER in "${EMBEDING_MODEL_LAYER[@]}"
+#   do
+#       if [ $counter -eq $SLURM_ARRAY_TASK_ID ]
+#       then
+#           echo "Running model: $MODEL with layer: $LAYER on GPU: $CUDA_VISIBLE_DEVICES"
+#           python run.py --prepare_dataset --dataset_name "squad" --embedding_model $MODEL --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id $LAYER --aggregation "mean"
+#       fi
+#       ((counter++))
+#   done
+#done
 
 # python run.py --prepare_dataset --dataset_name "squad" --embedding_model "instruct_embedding" --embed_device $CUDA_VISIBLE_DEVICES
 
