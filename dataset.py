@@ -241,7 +241,7 @@ def prepare_quac_dataset(
             f.write(f"{final_question.strip()}\t{final_answer.strip()}\t{context_id}\n")
 
 
-def prepare_trivia_dataset(base_data_dir, debug=False, split="train", use_random_contexts=False, random_contexts_count=10000):
+def prepare_trivia_dataset(base_data_dir, debug=False, split="rc", use_random_contexts=False, random_contexts_count=10000):
     """
     Prepare trivia_qa dataset
     Parameters:
