@@ -348,11 +348,19 @@ def get_course_data(base_data_dir, debug=False, weblink="http://zhiting.ucsd.edu
 
     list_of_pdfs = []
     # Get list of pdfs from the course website
+
     r = requests.get(weblink)
     soup = BeautifulSoup(r.text, 'html.parser')
+
+    weblink = '/'.join(weblink.split("/")[:-1])
     for link in soup.find_all('a'):
-        if link.get('href')[-3:] == 'pdf':
-            list_of_pdfs.append(f"{weblink}/{link.get('href')[2:]}")
+        linkval = link.get('href')
+        if linkval[-3:] == 'pdf':
+
+            if not linkval.startswith("http"):
+                list_of_pdfs.append(f"{weblink}/{linkval[2:]}")
+            else:
+                list_of_pdfs.append(linkval)
 
     # Save pdfs
     documents_dir = get_document_folder(
@@ -360,8 +368,8 @@ def get_course_data(base_data_dir, debug=False, weblink="http://zhiting.ucsd.edu
     )
     logger.info(f"Saving documents to: {documents_dir}")
     for i, pdf in tqdm(enumerate(list_of_pdfs), total=len(list_of_pdfs)):
-        with open(os.path.join(documents_dir, f"{i}.pdf"), "wb") as f:
-            f.write(requests.get(pdf).content)
+            with open(os.path.join(documents_dir, f"{i}.pdf"), "wb") as f:
+                f.write(requests.get(pdf).content)
     logger.info(
         f"Total Documents: {len(list_of_pdfs)}"
     )
