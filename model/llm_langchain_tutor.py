@@ -266,6 +266,7 @@ class LLMLangChainTutor:
             return_full_text=False,
         )
 
+    @torch.no_grad()
     def conversational_qa(self, user_input):
         """
         Return output of query given a user input.
@@ -279,7 +280,7 @@ class LLMLangChainTutor:
 
         # retrieve relevant documents as context
         context = " \n ".join(
-            [each.page_content for each in self.similarity_search_topk(user_input, k=5)]
+            [each.page_content for each in self.similarity_search_topk(user_input, k=1)]
         )
 
         # create prompt
