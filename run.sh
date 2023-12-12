@@ -70,15 +70,19 @@ do
 done
 
 QUERY_CHOICE=("1", "2")
+MODEL_LIST=("hf_lmsys/vicuna-7b-v1.3" "hf_meta-llama/Llama-2-7b-chat-hf")
 
-for QR_CHOICE in "${QUERY_CHOICE[@]}"
+for MODEL in "${MODEL_LIST[@]}"
 do
-    if [ $counter -eq $SLURM_ARRAY_TASK_ID ]
-            then
-                echo "Running model: $MODEL with layer: $LAYER on GPU: $CUDA_VISIBLE_DEVICES for dataset: $DATASET"
-                python run.py --prepare_dataset --dataset_name "squad" --embedding_model $MODEL --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id -1 --aggregation "mean" --use_random_contexts --random_contexts_count $RAND_CONTEXT_COUNT
-            fi
-            ((counter++))
+    for QR_CHOICE in "${QUERY_CHOICE[@]}"
+    do
+        if [ $counter -eq $SLURM_ARRAY_TASK_ID ]
+                then
+                    echo "Running model: $MODEL with layer: $LAYER on GPU: $CUDA_VISIBLE_DEVICES for dataset: $DATASET"
+                    python run.py --prepare_dataset --dataset_name "squad" --embedding_model $MODEL --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id -1 --aggregation "mean" --query_choice $QR_CHOICE
+                fi
+                ((counter++))
+        done
     done
 done
 
