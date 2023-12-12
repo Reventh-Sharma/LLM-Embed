@@ -27,32 +27,32 @@ printenv
 
 
 # Loop over the following models and embedding layers
-MODEL_LIST=("hf_lmsys/vicuna-13b-v1.3" "hf_meta-llama/Llama-2-13b-chat-hf")
-EMBEDING_MODEL_LAYER=("-1")
+# MODEL_LIST=("hf_lmsys/vicuna-13b-v1.3" "hf_meta-llama/Llama-2-13b-chat-hf")
+# EMBEDING_MODEL_LAYER=("-1")
 # EMBEDING_MODEL_LAYER=("-1" "-2" "-3")
-TYPES=("mean")
-counter=0
+# TYPES=("mean")
+# counter=0
 
 ## All datasets
-DATASET_LIST=("squad" "quac" "trivia_qa")
+# DATASET_LIST=("squad" "quac" "trivia_qa")
 
-for DATASET in "${DATASET_LIST[@]}"
-do
-    for MODEL in "${MODEL_LIST[@]}"
-    do
-        for LAYER in "${EMBEDING_MODEL_LAYER[@]}"
-        do
-            if [ $counter -eq $SLURM_ARRAY_TASK_ID ]
-            then
-                echo "Running model: $MODEL with layer: $LAYER on GPU: $CUDA_VISIBLE_DEVICES for dataset: $DATASET"
-                python run.py --prepare_dataset --dataset_name $DATASET --embedding_model $MODEL --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id $LAYER --aggregation "mean"
-            fi
-            ((counter++))
-        done
-    done
-done
+# for DATASET in "${DATASET_LIST[@]}"
+# do
+#     for MODEL in "${MODEL_LIST[@]}"
+#     do
+#         for LAYER in "${EMBEDING_MODEL_LAYER[@]}"
+#         do
+#             if [ $counter -eq $SLURM_ARRAY_TASK_ID ]
+#             then
+#                 echo "Running model: $MODEL with layer: $LAYER on GPU: $CUDA_VISIBLE_DEVICES for dataset: $DATASET"
+#                 python run.py --prepare_dataset --dataset_name $DATASET --embedding_model $MODEL --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id $LAYER --aggregation "mean"
+#             fi
+#             ((counter++))
+#         done
+#     done
+# done
 
-MODEL_LIST=("hf_lmsys/vicuna-13b-v1.3" "hf_meta-llama/Llama-2-13b-chat-hf", "instruction_embedding")
+MODEL_LIST=("hf_lmsys/vicuna-7b-v1.3" "hf_meta-llama/Llama-2-7b-chat-hf", "instruct_embedding")
 RAND_CONTEXT_COUNT=("2500" "5000" "7500" "10000")
 
 for MODEL in "${MODEL_LIST[@]}"
@@ -62,25 +62,25 @@ do
         if [ $counter -eq $SLURM_ARRAY_TASK_ID ]
             then
                 echo "Running model: $MODEL with layer: $LAYER on GPU: $CUDA_VISIBLE_DEVICES for dataset: $DATASET"
-                python run.py --prepare_dataset --dataset_name "squad" --dataset_split "validation" --embedding_model $MODEL --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id -1 --aggregation "mean" --use_random_contexts --random_contexts_count $RAND_CONTEXT_COUNT
+                python run.py --prepare_dataset --dataset_name "squad" --dataset_split "validation" --embedding_model $MODEL --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id -1 --aggregation "mean" --use_random_contexts --random_contexts_count $RAND_CONTEXT_COUNT --llm_model $MODEL --llm_device $CUDA_VISIBLE_DEVICES
             fi
             ((counter++))
         done
     done
 done
 
-# QUERY_CHOICE=("1", "2")
+QUERY_CHOICE=("1", "2")
 
-# for QR_CHOICE in "${QUERY_CHOICE[@]}"
-# do
-#     if [ $counter -eq $SLURM_ARRAY_TASK_ID ]
-#             then
-#                 echo "Running model: $MODEL with layer: $LAYER on GPU: $CUDA_VISIBLE_DEVICES for dataset: $DATASET"
-#                 python run.py --prepare_dataset --dataset_name "squad" --embedding_model $MODEL --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id -1 --aggregation "mean" --use_random_contexts --random_contexts_count $RAND_CONTEXT_COUNT
-#             fi
-#             ((counter++))
-#     done
-# done
+for QR_CHOICE in "${QUERY_CHOICE[@]}"
+do
+    if [ $counter -eq $SLURM_ARRAY_TASK_ID ]
+            then
+                echo "Running model: $MODEL with layer: $LAYER on GPU: $CUDA_VISIBLE_DEVICES for dataset: $DATASET"
+                python run.py --prepare_dataset --dataset_name "squad" --embedding_model $MODEL --embed_device $CUDA_VISIBLE_DEVICES --hidden_state_id -1 --aggregation "mean" --use_random_contexts --random_contexts_count $RAND_CONTEXT_COUNT
+            fi
+            ((counter++))
+    done
+done
 
 
 
