@@ -1,15 +1,17 @@
 import argparse
 import hashlib
 import os
-import pandas as pd
-import numpy as np
 import shutil
-from datasets import load_dataset
-from tqdm import tqdm
+
+import numpy as np
+import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-from utils import get_cache_dir, get_context_id_file, get_document_folder, get_qa_file
+from datasets import load_dataset
 from loguru import logger
+from tqdm import tqdm
+
+from utils import get_cache_dir, get_context_id_file, get_document_folder, get_qa_file
 
 
 def parse_args():
@@ -115,7 +117,8 @@ def prepare_squad_dataset(
     if use_random_contexts:
         logger.info("Adding random unrelated contexts...")
         rand_contexts = generate_random_unrelated_contexts(
-            base_data_dir, from_existing_unrelated=True, debug=debug)[:random_contexts_count]
+            base_data_dir, from_existing_unrelated=True, debug=debug
+        )[:random_contexts_count]
         total_rands = random_contexts_count
         startfrom = len(contexts)
         for i, rand_context in tqdm(enumerate(rand_contexts), total=total_rands):
@@ -189,15 +192,32 @@ def prepare_quac_dataset(
     docid_map = {}  # maps document titles to doc ids
 
     logger.info("Preparing documents...")
-    for i, (wikipedia_page_title, background, sectiontitle, context, question, answer) in tqdm(
-            enumerate(
-                zip(wikipedia_page_titles, backgrounds, sectiontitles, contexts, questions, answers)),
-            total=len(questions)
+    for i, (
+        wikipedia_page_title,
+        background,
+        sectiontitle,
+        context,
+        question,
+        answer,
+    ) in tqdm(
+        enumerate(
+            zip(
+                wikipedia_page_titles,
+                backgrounds,
+                sectiontitles,
+                contexts,
+                questions,
+                answers,
+            )
+        ),
+        total=len(questions),
     ):
         # Extract the needed info
-        title = wikipedia_page_title+":"+sectiontitle
+        title = wikipedia_page_title + ":" + sectiontitle
 
-        document = f"{wikipedia_page_title}:\n{background}\n\n{sectiontitle}:\n{context}"
+        document = (
+            f"{wikipedia_page_title}:\n{background}\n\n{sectiontitle}:\n{context}"
+        )
 
         if title in docid_map:
             docid = docid_map[title]
@@ -205,8 +225,13 @@ def prepare_quac_dataset(
             docid = len(documents)
             docid_map[title] = docid
             documents.append(document)
-        
-    documents_dir = get_document_folder(base_data_dir=base_data_dir, dataset_name=dataset_name, debug=debug, delete_if_exists=True)
+
+    documents_dir = get_document_folder(
+        base_data_dir=base_data_dir,
+        dataset_name=dataset_name,
+        debug=debug,
+        delete_if_exists=True,
+    )
     logger.info(f"Saving documents to: {documents_dir}")
     for i, document in tqdm(enumerate(documents), total=len(documents)):
         with open(os.path.join(documents_dir, f"{i}.txt"), "w") as f:
@@ -216,7 +241,9 @@ def prepare_quac_dataset(
     # Add random contexts
     if use_random_contexts:
         logger.info("Adding random unrelated contexts...")
-        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug)[:random_contexts_count]
+        rand_contexts = generate_random_unrelated_contexts(
+            base_data_dir, from_existing_unrelated=True, debug=debug
+        )[:random_contexts_count]
         total_rands = random_contexts_count
         startfrom = len(contexts)
         for i, rand_context in tqdm(enumerate(rand_contexts), total=total_rands):
@@ -228,21 +255,32 @@ def prepare_quac_dataset(
     qa_file = get_qa_file(base_data_dir, dataset_name, debug)
     logger.info(f"Saving QA pairs to: {qa_file}")
     with open(qa_file, "w") as f:
-        for i, (question, answer, wikipedia_page_title, sectiontitle) in tqdm(enumerate(zip(questions, answers, wikipedia_page_titles, sectiontitles)), total=len(questions)):
-            context_id = docid_map[wikipedia_page_title+":"+sectiontitle]
+        for i, (question, answer, wikipedia_page_title, sectiontitle) in tqdm(
+            enumerate(zip(questions, answers, wikipedia_page_titles, sectiontitles)),
+            total=len(questions),
+        ):
+            context_id = docid_map[wikipedia_page_title + ":" + sectiontitle]
             # Questions sometime lack context (e.g. What happened in 1893?, multiple things could have happened hence title is required), we add this context as wikipedia page title
-            final_question = f'In regards to {wikipedia_page_title}:'
-            final_answer = '' 
+            final_question = f"In regards to {wikipedia_page_title}:"
+            final_answer = ""
             # There are multiple questions in each row, we combine them together as a single question. Similarly multiple answers are combined together as a single answer
             for i, each_question in enumerate(question):
-                if answer['texts'][i] != "CANNOTANSWER":
+                if answer["texts"][i] != "CANNOTANSWER":
                     final_question += each_question.strip() + " "
-                    final_answer += answer['texts'][i].strip() + " "
-                    f.write(f"{each_question.strip()}\t{answer['texts'][i].strip()}\t{context_id}\n")
+                    final_answer += answer["texts"][i].strip() + " "
+                    f.write(
+                        f"{each_question.strip()}\t{answer['texts'][i].strip()}\t{context_id}\n"
+                    )
             f.write(f"{final_question.strip()}\t{final_answer.strip()}\t{context_id}\n")
 
 
-def prepare_trivia_dataset(base_data_dir, debug=False, split="rc", use_random_contexts=False, random_contexts_count=10000):
+def prepare_trivia_dataset(
+    base_data_dir,
+    debug=False,
+    split="rc",
+    use_random_contexts=False,
+    random_contexts_count=10000,
+):
     """
     Prepare trivia_qa dataset
     Parameters:
@@ -257,8 +295,9 @@ def prepare_trivia_dataset(base_data_dir, debug=False, split="rc", use_random_co
     # Load your trivia dataset
     # Adjust the following line based on your actual dataset structure
     logger.info("Loading trivia dataset...")
-    data_split = load_dataset("trivia_qa", name="rc", split=split,
-                           cache_dir=base_data_dir)
+    data_split = load_dataset(
+        "trivia_qa", name="rc", split=split, cache_dir=base_data_dir
+    )
 
     logger.info(f"Loaded trivia_qa dataset for {split} split...")
 
@@ -278,18 +317,17 @@ def prepare_trivia_dataset(base_data_dir, debug=False, split="rc", use_random_co
     docid_map = {}  # maps document titles to doc ids
     context_docid_map = {}  # maps contexts to doc ids
 
-
     logger.info("Preparing documents...")
     for i, (question, entity_pages, answer) in tqdm(
-            enumerate(zip(questions, data_split["entity_pages"], data_split["answer"])),
-            total=len(questions)
+        enumerate(zip(questions, data_split["entity_pages"], data_split["answer"])),
+        total=len(questions),
     ):
         # Extract the needed info from entity_pages
-        title = ' '.join(entity_pages["title"])
-        wiki_context = ' '.join(entity_pages["wiki_context"])
-        answer_text = answer['value']
+        title = " ".join(entity_pages["title"])
+        wiki_context = " ".join(entity_pages["wiki_context"])
+        answer_text = answer["value"]
         # Title, wiki_context and answer_text should not be empty
-        if len(title)>0 and len(wiki_context)>0 and len(answer_text)>0:
+        if len(title) > 0 and len(wiki_context) > 0 and len(answer_text) > 0:
             # Check if document already exists
             questions_withdocuments.append(question)
             answers_withdocuments.append(answer_text)
@@ -322,7 +360,9 @@ def prepare_trivia_dataset(base_data_dir, debug=False, split="rc", use_random_co
     # Add random contexts
     if use_random_contexts:
         logger.info("Adding random unrelated contexts...")
-        rand_contexts = generate_random_unrelated_contexts(base_data_dir, from_existing_unrelated=True, debug=debug)[:random_contexts_count]
+        rand_contexts = generate_random_unrelated_contexts(
+            base_data_dir, from_existing_unrelated=True, debug=debug
+        )[:random_contexts_count]
         total_rands = random_contexts_count
         startfrom = len(documents)
         for i, rand_context in tqdm(enumerate(rand_contexts), total=total_rands):
@@ -336,26 +376,28 @@ def prepare_trivia_dataset(base_data_dir, debug=False, split="rc", use_random_co
     logger.info(f"Saving QA pairs to: {qa_file}")
     with open(qa_file, "w") as f:
         for i, (question, answer_text, context_id) in tqdm(
-                enumerate(zip(questions_withdocuments, answers_withdocuments, context_ids)),
-                total=len(questions_withdocuments)
+            enumerate(zip(questions_withdocuments, answers_withdocuments, context_ids)),
+            total=len(questions_withdocuments),
         ):
             f.write(f"{question.strip()}\t{answer_text}\t{context_id}\n")
     logger.info(f"Total QA pairs saved: {len(questions_withdocuments)}")
 
 
-def get_course_data(base_data_dir, debug=False, weblink="http://zhiting.ucsd.edu/teaching/dsc250fall2023/lectures.html"):
-
+def get_course_data(
+    base_data_dir,
+    debug=False,
+    weblink="http://zhiting.ucsd.edu/teaching/dsc250fall2023/lectures.html",
+):
     list_of_pdfs = []
     # Get list of pdfs from the course website
 
     r = requests.get(weblink)
-    soup = BeautifulSoup(r.text, 'html.parser')
+    soup = BeautifulSoup(r.text, "html.parser")
 
-    weblink = '/'.join(weblink.split("/")[:-1])
-    for link in soup.find_all('a'):
-        linkval = link.get('href')
-        if linkval[-3:] == 'pdf':
-
+    weblink = "/".join(weblink.split("/")[:-1])
+    for link in soup.find_all("a"):
+        linkval = link.get("href")
+        if linkval[-3:] == "pdf":
             if not linkval.startswith("http"):
                 list_of_pdfs.append(f"{weblink}/{linkval[2:]}")
             else:
@@ -367,14 +409,12 @@ def get_course_data(base_data_dir, debug=False, weblink="http://zhiting.ucsd.edu
     )
     logger.info(f"Saving documents to: {documents_dir}")
     for i, pdf in tqdm(enumerate(list_of_pdfs), total=len(list_of_pdfs)):
-            with open(os.path.join(documents_dir, f"{i}.pdf"), "wb") as f:
-                f.write(requests.get(pdf).content)
-            # Check file length to see if it is empty
-            if os.path.getsize(os.path.join(documents_dir, f"{i}.pdf")) < 10000:
-                os.remove(os.path.join(documents_dir, f"{i}.pdf"))
-    logger.info(
-        f"Total Documents: {len(list_of_pdfs)}"
-    )
+        with open(os.path.join(documents_dir, f"{i}.pdf"), "wb") as f:
+            f.write(requests.get(pdf).content)
+        # Check file length to see if it is empty
+        if os.path.getsize(os.path.join(documents_dir, f"{i}.pdf")) < 10000:
+            os.remove(os.path.join(documents_dir, f"{i}.pdf"))
+    logger.info(f"Total Documents: {len(list_of_pdfs)}")
 
 
 def prepare_data(
@@ -385,7 +425,8 @@ def prepare_data(
     doc_prob=1.0,
     use_random_contexts=False,
     random_contexts_count=10000,
-    weblink="http://zhiting.ucsd.edu/teaching/dsc250fall2023/lectures.html"):
+    weblink="http://zhiting.ucsd.edu/teaching/dsc250fall2023/lectures.html",
+):
     """
     Parameters:
         dataset_name: name of the dataset
@@ -398,16 +439,16 @@ def prepare_data(
             split=split,
             doc_prob=doc_prob,
             use_random_contexts=use_random_contexts,
-            random_contexts_count=random_contexts_count
+            random_contexts_count=random_contexts_count,
         )
-    
+
     elif dataset_name == "quac":
         prepare_quac_dataset(
             base_data_dir,
             debug,
             split=split,
             use_random_contexts=use_random_contexts,
-            random_contexts_count=random_contexts_count
+            random_contexts_count=random_contexts_count,
         )
 
     elif dataset_name == "trivia_qa":
@@ -416,15 +457,11 @@ def prepare_data(
             debug,
             split=split,
             use_random_contexts=use_random_contexts,
-            random_contexts_count=random_contexts_count
-            )
-    
-    elif dataset_name == "course":
-        get_course_data(
-            base_data_dir=base_data_dir,
-            debug=debug,
-            weblink=weblink
+            random_contexts_count=random_contexts_count,
         )
+
+    elif dataset_name == "course":
+        get_course_data(base_data_dir=base_data_dir, debug=debug, weblink=weblink)
 
     else:
         raise ValueError("Dataset name not found")

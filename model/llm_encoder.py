@@ -1,13 +1,11 @@
-import torch
-
 from typing import Any, Dict, List, Optional
 
+import torch
 from langchain.embeddings.base import Embeddings
 from langchain.pydantic_v1 import BaseModel, Extra, Field
-from transformers import AutoModel, AutoTokenizer
 from loguru import logger
-
 from tqdm import tqdm
+from transformers import AutoModel, AutoTokenizer
 
 
 class LLMBasedEmbeddings(Embeddings):

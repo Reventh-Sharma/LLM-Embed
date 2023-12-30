@@ -1,17 +1,17 @@
 import argparse
 import os
 import shutil
-
-import numpy as np
 import sys
 
-from dataset import prepare_data, get_parsed_data
-from model.llm_langchain_tutor import LLMLangChainTutor
-from utils import get_cache_dir, get_document_folder, get_vector_file
-from metrics import EmbeddingModelMetrics
+import numpy as np
+import torch
 from loguru import logger
 from tqdm import tqdm
-import torch
+
+from dataset import get_parsed_data, prepare_data
+from metrics import EmbeddingModelMetrics
+from model.llm_langchain_tutor import LLMLangChainTutor
+from utils import get_cache_dir, get_document_folder, get_vector_file
 
 # set logging level
 handler = {"sink": sys.stdout, "level": "INFO"}
@@ -23,7 +23,7 @@ def parse_args():
 
     # dataset preparation arguments
     parser.add_argument("--prepare_dataset", action="store_true")
-    parser.add_argument("--dataset_name", type=str, default="squad")
+    parser.add_argument("--dataset_name", type=str, default="course")
     parser.add_argument(
         "--dataset_split", type=str, default="train", help="train or validation"
     )
@@ -41,7 +41,9 @@ def parse_args():
         default="what's the course about?",
         help="Prompt to start conversation",
     )
-    parser.add_argument("--embedding_model", type=str, default="")
+    parser.add_argument(
+        "--embedding_model", type=str, default="hf_lmsys/vicuna-7b-v1.3"
+    )
     parser.add_argument("--hidden_state_id", type=int, default=-1)
     parser.add_argument("--aggregation", type=str, default="mean")
     parser.add_argument(
@@ -83,10 +85,17 @@ def parse_args():
         help="whether to prepare a small subset of the dataset",
     )
     parser.add_argument("--ext_type", type=str, default="*.txt")
-
-    parser.add_argument("--tutor", action="store_true", default=False, help="Initialize as tutor to answer prompts if True")
-
-    parser.add_argument("--weblink", default="http://zhiting.ucsd.edu/teaching/dsc250fall2023/lectures.html", help="Source for course files")
+    parser.add_argument(
+        "--tutor",
+        action="store_true",
+        default=False,
+        help="Initialize as tutor to answer prompts if True",
+    )
+    parser.add_argument(
+        "--weblink",
+        default="http://zhiting.ucsd.edu/teaching/dsc250fall2023/lectures.html",
+        help="Source for course files",
+    )
 
     # parse arguments
     args = parser.parse_args()
@@ -111,16 +120,21 @@ def main(
     doc_prob=1.0,
     use_random_contexts=False,
     random_contexts_count=10000,
-    tutor = False,
-    weblink = "http://zhiting.ucsd.edu/teaching/dsc250fall2023/lectures.html"
+    tutor=False,
+    weblink="http://zhiting.ucsd.edu/teaching/dsc250fall2023/lectures.html",
 ):
     # Prepare dataset
     if prepare_dataset:
         logger.info("Preparing dataset...")
         prepare_data(
-            dataset_name, base_data_dir, debug, split=dataset_split, doc_prob=doc_prob,
-            use_random_contexts=use_random_contexts, random_contexts_count=random_contexts_count,
-            weblink=weblink
+            dataset_name,
+            base_data_dir,
+            debug,
+            split=dataset_split,
+            doc_prob=doc_prob,
+            use_random_contexts=use_random_contexts,
+            random_contexts_count=random_contexts_count,
+            weblink=weblink,
         )
     else:
         logger.info("Dataset preparation skipped.")
@@ -162,7 +176,9 @@ def main(
     # Dataset format: [question, answer, context_id]
     if not tutor:
         logger.info("Loading dataset...")
-        dataset = get_parsed_data(dataset_name, base_data_dir=base_data_dir, debug=debug)
+        dataset = get_parsed_data(
+            dataset_name, base_data_dir=base_data_dir, debug=debug
+        )
 
         # Initialize instance of EmbeddingModelMetrics
         # iterate over (question, context_id) pairs
@@ -176,12 +192,11 @@ def main(
                 elif query_choice == "2":
                     query_prefix = "You are a teaching assistant. Answer this question asked by your student:"
                 else:
-                    query_prefix = ""   
+                    query_prefix = ""
                 question = f"{query_prefix} {question}"
             else:
-                query_prefix = ""   
+                query_prefix = ""
                 question = f"{query_prefix} {question}"
-
 
             doc_id = row["doc_id"]
 

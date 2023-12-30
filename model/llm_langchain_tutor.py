@@ -2,20 +2,16 @@ import os
 
 import torch
 from langchain.document_loaders import DirectoryLoader
-from langchain.embeddings import HuggingFaceInstructEmbeddings, HuggingFaceEmbeddings
+from langchain.embeddings import HuggingFaceEmbeddings, HuggingFaceInstructEmbeddings
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.llms import OpenAI
 from langchain.memory import ChatMessageHistory
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import FAISS
-
-
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from transformers import pipeline
+from loguru import logger
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
 from model.llm_encoder import LLMBasedEmbeddings
-from loguru import logger
-
 from query_engineering import add_query_instruction
 
 # Pipeline type dictionary

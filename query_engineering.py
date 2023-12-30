@@ -13,4 +13,3 @@ def add_query_instruction(prefix, documents):
         document.page_content = prefix + document.page_content
 
     return documents
-    

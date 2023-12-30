@@ -1,11 +1,12 @@
-import pandas as pd
-from datasets import list_datasets
-from datasets import load_dataset
 import random
+
+import pandas as pd
+from datasets import list_datasets, load_dataset
 
 datasets_list = list_datasets()
 
-def load_hf_dataset_to_pandas(dataset_name, split='train', config_name=None):
+
+def load_hf_dataset_to_pandas(dataset_name, split="train", config_name=None):
     """
     Load a dataset from Hugging Face using the datasets library and convert it to a Pandas DataFrame.
 
@@ -26,7 +27,7 @@ def load_hf_dataset_to_pandas(dataset_name, split='train', config_name=None):
 
     # Access the specified split or default to 'train' if it doesn't exist
     if "train" in available_splits:
-        dataset_split = dataset.get(split, dataset.get('train'))
+        dataset_split = dataset.get(split, dataset.get("train"))
         print("**Train** data is used")
     else:
         random_key = random.choice(list(dataset.keys()))
@@ -38,6 +39,7 @@ def load_hf_dataset_to_pandas(dataset_name, split='train', config_name=None):
 
     return df
 
+
 # ## Quac Data
 
 # quac_df = load_hf_dataset_to_pandas("quac")
@@ -47,4 +49,3 @@ def load_hf_dataset_to_pandas(dataset_name, split='train', config_name=None):
 
 # trivia_df = load_hf_dataset_to_pandas("trivia", "rc")
 # trivia_df
-

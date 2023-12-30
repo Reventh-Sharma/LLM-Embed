@@ -31,7 +31,9 @@ def get_cache_dir(base_dir="/scratch"):
     return cache_dir
 
 
-def get_document_folder(base_data_dir, dataset_name, debug=False, delete_if_exists=False):
+def get_document_folder(
+    base_data_dir, dataset_name, debug=False, delete_if_exists=False
+):
     if debug:
         dir_name = os.path.join(
             base_data_dir, f"{dataset_name}-debug", "train", "documents"
